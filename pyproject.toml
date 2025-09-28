@@ -1,0 +1,8 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+
+[project]
+name = "wildlife-pipeline"
+version = "0.1.0"
+description = "Folder-based wildlife image classifier with metadata extraction"
+requires-python = ">=3.10"
