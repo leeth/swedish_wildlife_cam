@@ -9,6 +9,7 @@ import boto3
 import time
 import json
 from pathlib import Path
+from datetime import datetime
 
 def get_default_vpc():
     """Get default VPC and subnets."""
@@ -132,15 +133,57 @@ def test_batch_job():
         job_id = response['jobId']
         print(f"✅ Job submitted: {job_id}")
         
-        # Monitor job
-        print("⏳ Monitoring job...")
-        for i in range(10):  # Check for 5 minutes
+        # Monitor job with enhanced logging
+        print("⏳ Monitoring job with detailed logging...")
+        start_time = time.time()
+        previous_status = None
+        
+        for i in range(20):  # Check for up to 10 minutes
             time.sleep(30)
+            elapsed = int(time.time() - start_time)
+            
             job = batch.describe_jobs(jobs=[job_id])
-            status = job['jobs'][0]['status']
-            print(f"   Job status: {status}")
+            job_info = job['jobs'][0]
+            status = job_info['status']
+            status_reason = job_info.get('statusReason', '')
+            
+            # Enhanced status logging
+            if status != previous_status:
+                print(f"   [{elapsed:3d}s] Status change: {previous_status} → {status}")
+                if status_reason:
+                    print(f"      Reason: {status_reason}")
+                previous_status = status
+            else:
+                print(f"   [{elapsed:3d}s] Status: {status}")
+            
+            # Get timing information
+            created_at = job_info.get('createdAt')
+            started_at = job_info.get('startedAt')
+            stopped_at = job_info.get('stoppedAt')
+            
+            if created_at:
+                runtime = datetime.now() - created_at
+                print(f"      Runtime: {runtime}")
+            
+            if started_at and not stopped_at:
+                processing_time = datetime.now() - started_at
+                print(f"      Processing: {processing_time}")
+            
+            # Get instance information
+            if 'attempts' in job_info and job_info['attempts']:
+                latest_attempt = job_info['attempts'][-1]
+                if 'container' in latest_attempt:
+                    container = latest_attempt['container']
+                    if 'logStreamName' in container:
+                        print(f"      Log stream: {container['logStreamName']}")
+                    if 'taskArn' in container:
+                        print(f"      Task ARN: {container['taskArn']}")
             
             if status in ['SUCCEEDED', 'FAILED']:
+                print(f"   [{elapsed:3d}s] Job finished: {status}")
+                if started_at and stopped_at:
+                    total_duration = stopped_at - started_at
+                    print(f"      Total duration: {total_duration}")
                 break
         
         if status == 'SUCCEEDED':

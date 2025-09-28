@@ -1,0 +1,180 @@
+# Odin - The All-Knowing Father
+# Defines the entire wildlife processing world
+
+name: "Wildlife Processing World"
+version: "1.0.0"
+description: "Complete wildlife detection pipeline with cost optimization"
+
+# Infrastructure Definition (Reverse Engineered from Existing Setup)
+infrastructure:
+  provider: "aws"
+  region: "eu-north-1"
+  cost_optimized: true
+  stack_name: "wildlife-simple-batch"
+  
+  # AWS Batch Configuration (From Existing Setup)
+  batch:
+    compute_environment:
+      name: "wildlife-compute-production"
+      arn: "arn:aws:batch:eu-north-1:696852893392:compute-environment/wildlife-compute-production"
+      type: "MANAGED"
+      state: "ENABLED"
+      status: "VALID"
+      instance_types: ["m5.large", "m5.xlarge"]
+      min_vcpus: 0
+      max_vcpus: 8
+      desired_vcpus: 0  # Start with 0, scale up when needed
+      subnets: ["subnet-082c5620acf9664c9", "subnet-005fb8e34c5717ac9", "subnet-075f89d01ce4e4d00"]
+      security_groups: ["sg-0806a42727fdc53e0"]
+      instance_role: "arn:aws:iam::696852893392:instance-profile/wildlife-simple-batch-BatchInstanceProfile-QGDtEaGERi1E"
+      service_role: "arn:aws:iam::696852893392:role/wildlife-batch-service-role-production"
+    
+    job_queue:
+      name: "wildlife-queue-production"
+      arn: "arn:aws:batch:eu-north-1:696852893392:job-queue/wildlife-queue-production"
+      priority: 1
+      state: "ENABLED"
+    
+    # Job Definitions for each stage
+    job_definitions:
+      stage1_manifest:
+        name: "wildlife-stage1-manifest"
+        vcpus: 2
+        memory: 4096
+        timeout: 600
+        
+      stage2_detection:
+        name: "wildlife-stage2-detection"
+        vcpus: 4
+        memory: 8192
+        timeout: 1800
+        gpu: false
+        
+      stage3_reporting:
+        name: "wildlife-stage3-reporting"
+        vcpus: 2
+        memory: 4096
+        timeout: 600
+
+# Data Storage (From Existing Setup)
+storage:
+  s3_bucket: "wildlife-test-production-696852893392"
+  prefixes:
+    raw_data: "raw-data"
+    stage1_manifest: "stage1-manifest"
+    stage2_detections: "stage2-detections"
+    stage3_reports: "stage3-reports"
+    models: "models"
+    logs: "logs"
+
+# Pipeline Stages
+pipeline:
+  stages:
+    stage0_upload:
+      name: "Data Upload"
+      description: "Upload raw trailcam data to S3"
+      input: "local test_data directory"
+      output: "s3://{bucket}/raw-data/"
+      
+    stage1_manifest:
+      name: "Manifest Creation"
+      description: "Create manifest and metadata for all files"
+      input: "s3://{bucket}/raw-data/"
+      output: "s3://{bucket}/stage1-manifest/"
+      job_definition: "stage1_manifest"
+      
+    stage2_detection:
+      name: "Wildlife Detection"
+      description: "Run Munin/Hugin wildlife detection on all files"
+      input: "s3://{bucket}/stage1-manifest/"
+      output: "s3://{bucket}/stage2-detections/"
+      job_definition: "stage2_detection"
+      models:
+        - name: "munin"
+          type: "image_classification"
+          confidence_threshold: 0.7
+        - name: "hugin"
+          type: "video_analysis"
+          confidence_threshold: 0.6
+          
+    stage3_reporting:
+      name: "Report Generation"
+      description: "Generate final reports and summaries"
+      input: "s3://{bucket}/stage2-detections/"
+      output: "s3://{bucket}/stage3-reports/"
+      job_definition: "stage3_reporting"
+
+# Cost Optimization
+cost_optimization:
+  enabled: true
+  spot_instances: true
+  auto_scale: true
+  cleanup_after_completion: false  # Keep infrastructure for reuse
+  
+  # Scaling policies
+  scaling:
+    scale_up_threshold: 1  # Scale up when jobs are queued
+    scale_down_delay: 300  # Wait 5 minutes before scaling down
+    max_scale_up_rate: 2   # Max 2 vCPUs per minute
+
+# Monitoring and Logging
+monitoring:
+  cloudwatch_logs: true
+  log_retention_days: 30
+  metrics:
+    - job_duration
+    - detection_accuracy
+    - cost_per_detection
+    - infrastructure_utilization
+
+# Security
+security:
+  iam_roles:
+    batch_job_role: "wildlife-batch-job-role"
+    batch_instance_role: "wildlife-batch-instance-role"
+  vpc:
+    use_default: true
+    security_groups:
+      - name: "wildlife-batch-sg"
+        description: "Security group for wildlife batch processing"
+
+# Odin Commands
+commands:
+  setup:
+    description: "Setup complete infrastructure"
+    action: "deploy_infrastructure"
+    
+  scale_up:
+    description: "Scale up compute environment"
+    action: "scale_compute_environment"
+    parameters:
+      desired_vcpus: 8
+      
+  scale_down:
+    description: "Scale down compute environment"
+    action: "scale_compute_environment"
+    parameters:
+      desired_vcpus: 0
+      
+  run_pipeline:
+    description: "Run complete pipeline with all data"
+    action: "execute_pipeline"
+    parameters:
+      input_data: "test_data"
+      stages: ["stage0", "stage1", "stage2", "stage3"]
+      
+  status:
+    description: "Show infrastructure and pipeline status"
+    action: "get_status"
+    
+  cleanup:
+    description: "Clean up all resources (use with caution)"
+    action: "cleanup_infrastructure"
+    confirmation_required: true
+
+# Environment Variables
+environment:
+  AWS_DEFAULT_REGION: "eu-north-1"
+  DATA_BUCKET: "{bucket_name}"
+  LOG_LEVEL: "INFO"
+  COST_OPTIMIZATION: "true"
