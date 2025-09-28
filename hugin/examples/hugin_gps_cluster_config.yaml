@@ -1,0 +1,79 @@
+# Hugin GPS Cluster Management Configuration
+# Specialized configuration for GPS cluster management within Hugin ecosystem
+
+# Database configuration
+database:
+  path: "data/hugin_clusters.db"  # SQLite database for cluster data
+  # Note: Database files are excluded from Git via .gitignore
+
+# GPS Clustering parameters
+clustering:
+  radius_meters: 5.0              # Cluster radius (5m = 10m diameter)
+  min_points: 1                  # Minimum points to form a cluster
+  auto_cluster: true              # Automatically cluster new observations
+  max_cluster_distance: 10.0      # Maximum distance for point assignment
+
+# Analytics integration
+analytics:
+  include_clusters: true          # Include cluster data in analytics
+  cluster_analysis: true          # Perform cluster-specific analysis
+  species_by_cluster: true        # Analyze species distribution by cluster
+  temporal_by_cluster: true       # Analyze temporal patterns by cluster
+  activity_patterns: true         # Analyze activity patterns across clusters
+
+# Workflow automation
+workflow:
+  auto_detect_overlaps: true       # Automatically detect overlapping clusters
+  overlap_threshold: 10.0         # Distance threshold for overlap detection
+  auto_merge_similar: false       # Automatically merge similar clusters
+  require_manual_approval: true   # Require manual approval for merges
+
+# Export settings
+export:
+  formats: ["json", "geojson", "kml", "csv"]
+  output_dir: "exports"
+  include_boundaries: true
+  include_statistics: true
+  include_analytics: true
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/hugin_gps_cluster.log"
+
+# Processing settings
+processing:
+  batch_size: 1000                # Process observations in batches
+  parallel_workers: 4             # Number of parallel workers
+  memory_limit_mb: 1024          # Memory limit for processing
+  gps_accuracy_threshold: 10.0    # Minimum GPS accuracy required (meters)
+
+# Cluster naming workflow
+naming:
+  auto_suggest: true              # Auto-suggest names based on location
+  require_description: false      # Require description when naming
+  max_name_length: 50            # Maximum cluster name length
+  allowed_characters: "a-zA-Z0-9_- "  # Allowed characters in names
+  naming_workflow: "manual"       # manual, semi_auto, auto
+
+# Quality control
+quality:
+  min_accuracy_meters: 5.0       # Minimum GPS accuracy required
+  max_age_days: 365              # Maximum age of observations to process
+  outlier_threshold: 50.0       # Distance threshold for outlier detection
+  validate_coordinates: true     # Validate GPS coordinates
+
+# Integration with other Hugin components
+integration:
+  wildlife_pipeline: true        # Integrate with wildlife pipeline
+  analytics_engine: true          # Use Hugin analytics engine
+  data_converter: true           # Use Hugin data converter
+  export_formats: ["parquet", "sqlite", "json"]
+
+# Performance settings
+performance:
+  cache_cluster_boundaries: true  # Cache cluster boundary calculations
+  lazy_loading: true              # Lazy load cluster data
+  memory_optimization: true      # Optimize memory usage
+  parallel_processing: true      # Use parallel processing where possible

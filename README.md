@@ -9,6 +9,47 @@ Odins Ravne er et omfattende system til svensk vildtmonitorering der kombinerer:
 - **Hugin**: Analyse, indsigt og visualisering (Stage 2+)
 - **Odin**: All-Father - Infrastruktur management og orchestration
 
+## 🔄 System Workflow
+
+```mermaid
+graph TD
+    A[Wildlife Camera Images] --> B[Munin Stage 0: Video Processing]
+    B --> C[Munin Stage 1: Object Detection]
+    C --> D{Positive Observations?}
+    D -->|Yes| E[Hugin Stage 2.1: Human/Animal Detection]
+    D -->|No| F[End: No Wildlife]
+    
+    E --> G[Hugin Stage 2.2: Species Detection]
+    G --> H[Hugin Stage 2.3: GPS Clustering]
+    H --> I[Hugin Stage 2.4: Cluster Enrichment]
+    I --> J[Final Reports with Cluster Names]
+    
+    K[User Labeling] --> L[Cluster Names]
+    L --> I
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#f3e5f5
+    style E fill:#e8f5e8
+    style G fill:#e8f5e8
+    style H fill:#e8f5e8
+    style I fill:#e8f5e8
+    style J fill:#fff3e0
+```
+
+### Workflow Stages
+
+**Munin (Memory Keeper)**:
+- **Stage 0**: Video frame ekstraktion og analyse
+- **Stage 1**: Objekt detektion (positive observations)
+- **Done**: Munin er færdig når der er konstateret positive observations
+
+**Hugin (Thought Bringer)**:
+- **Stage 2.1**: Menneske eller dyr detection
+- **Stage 2.2**: Species detection (hvilket dyr)
+- **Stage 2.3**: Dan cluster og data observations
+- **Stage 2.4**: Berig med cluster navn for pretty reporting
+
 ## 🚀 Hurtig Start
 
 ### Forudsætninger
@@ -88,14 +129,16 @@ aws batch submit-job --job-definition wildlife-pipeline
 
 ## 🐦‍⬛ Munin (Memory Keeper)
 
-**Formål**: Data indtagelse, procesering og lagring
+**Formål**: Data indtagelse, procesering og lagring (Stage 0-1)
 
 **Nøglefunktioner**:
-- Svensk vildt detektion (elg, vildsvin, rådyr, ræv, grævling)
-- Video frame ekstraktion og analyse
+- **Stage 0**: Video frame ekstraktion og analyse
+- **Stage 1**: Objekt detektion (positive observations)
 - EXIF metadata procesering
 - GPS lokationsklassifikation
 - Cloud-optional arkitektur
+
+**Munin er done** når den har lavet stage 1 og konstateret om der er positive observation.
 
 ### 🎥 Video Procesering
 - **Frame Ekstraktion**: Ekstraher frames fra MP4, AVI, MOV, MKV videoer
@@ -138,20 +181,28 @@ munin upload /data --cloud aws
 
 ## 🧠 Hugin (Thought Bringer)
 
-**Formål**: Analyse, indsigt og visualisering
+**Formål**: Analyse, indsigt og visualisering (Stage 2+)
 
 **Nøglefunktioner**:
-- Vildt adfærdsanalyse
-- Populationstrends forudsigelse
-- Naturbeskyttelses rapportering
-- Interaktive dashboards
-- Forskningsdata eksport
+- **Stage 2.1**: Menneske eller dyr detection
+- **Stage 2.2**: Species detection (hvilket dyr)
+- **Stage 2.3**: Dan cluster og data observations
+- **Stage 2.4**: Berig med cluster navn for pretty reporting
+- GPS proximity clustering (5m radius)
+- Data condensation med configurable time windows
+- Decoupled labeling system
 
 **CLI Kommandoer**:
 ```bash
-hugin analyze /data --species moose
-hugin report /data --format pdf
-hugin dashboard /data --web
+# Hugin Stage 2 workflow
+python -m hugin.post_s2_workflow process munin_results.json outputs/hugin_analysis
+
+# GPS Cluster Management
+python -m hugin.hugin_gps_cluster_management process observations.json outputs/clusters
+
+# Cluster Tagging
+python -m hugin.hugin_gps_cluster_management cluster request-unknown --limit 20
+python -m hugin.hugin_gps_cluster_management cluster submit-names labels.yaml
 ```
 
 ## ⚡ Odin (All-Father)
@@ -258,10 +309,16 @@ hugin dashboard /data --web
 - LocalStack integration
 - CLI interface
 
-### 🚧 I Gang (Hugin)
-- Analyse framework
-- Data modeller og validering
-- Grundlæggende rapporterings funktioner
+### ✅ Completed (Hugin)
+- **Stage 2.1**: Menneske eller dyr detection
+- **Stage 2.2**: Species detection (hvilket dyr)
+- **Stage 2.3**: GPS proximity clustering (5m radius)
+- **Stage 2.4**: Cluster enrichment med navne
+- GPS cluster management system
+- Data condensation med time windows
+- Decoupled labeling workflow
+- Cluster-aware analytics
+- YAML-based workflow configuration
 
 ### 📋 Roadmap
 Se [ROADMAP.md](docs/ROADMAP.md) for detaljeret udviklingsplan.

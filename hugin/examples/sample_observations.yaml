@@ -1,0 +1,94 @@
+# Sample Wildlife Camera Observations
+# This file contains example GPS observations for clustering
+
+observations:
+  - observation_id: "obs_001"
+    camera_id: "cam_001"
+    timestamp: "2024-01-15T08:30:00Z"
+    gps_latitude: 55.6761
+    gps_longitude: 12.5683
+    species: "roe_deer"
+    confidence: 0.95
+    image_path: "/data/images/cam_001/IMG_001.jpg"
+    
+  - observation_id: "obs_002"
+    camera_id: "cam_001"
+    timestamp: "2024-01-15T09:15:00Z"
+    gps_latitude: 55.6762
+    gps_longitude: 12.5684
+    species: "roe_deer"
+    confidence: 0.88
+    image_path: "/data/images/cam_001/IMG_002.jpg"
+    
+  - observation_id: "obs_003"
+    camera_id: "cam_002"
+    timestamp: "2024-01-15T10:00:00Z"
+    gps_latitude: 55.6763
+    gps_longitude: 12.5685
+    species: "red_fox"
+    confidence: 0.92
+    image_path: "/data/images/cam_002/IMG_003.jpg"
+    
+  - observation_id: "obs_004"
+    camera_id: "cam_003"
+    timestamp: "2024-01-15T11:30:00Z"
+    gps_latitude: 55.6800
+    gps_longitude: 12.5700
+    species: "roe_deer"
+    confidence: 0.85
+    image_path: "/data/images/cam_003/IMG_004.jpg"
+    
+  - observation_id: "obs_005"
+    camera_id: "cam_003"
+    timestamp: "2024-01-15T12:00:00Z"
+    gps_latitude: 55.6801
+    gps_longitude: 12.5701
+    species: "roe_deer"
+    confidence: 0.90
+    image_path: "/data/images/cam_003/IMG_005.jpg"
+    
+  - observation_id: "obs_006"
+    camera_id: "cam_004"
+    timestamp: "2024-01-15T14:00:00Z"
+    gps_latitude: 55.6900
+    gps_longitude: 12.5800
+    species: "wild_boar"
+    confidence: 0.78
+    image_path: "/data/images/cam_004/IMG_006.jpg"
+    
+  - observation_id: "obs_007"
+    camera_id: "cam_004"
+    timestamp: "2024-01-15T15:30:00Z"
+    gps_latitude: 55.6901
+    gps_longitude: 12.5801
+    species: "wild_boar"
+    confidence: 0.82
+    image_path: "/data/images/cam_004/IMG_007.jpg"
+    
+  - observation_id: "obs_008"
+    camera_id: "cam_005"
+    timestamp: "2024-01-15T16:45:00Z"
+    gps_latitude: 55.7000
+    gps_longitude: 12.5900
+    species: "red_fox"
+    confidence: 0.88
+    image_path: "/data/images/cam_005/IMG_008.jpg"
+
+# Metadata about the dataset
+metadata:
+  source: "Wildlife Camera Network"
+  location: "Copenhagen Forest"
+  date_range:
+    start: "2024-01-15T00:00:00Z"
+    end: "2024-01-15T23:59:59Z"
+  total_observations: 8
+  cameras:
+    - "cam_001"
+    - "cam_002" 
+    - "cam_003"
+    - "cam_004"
+    - "cam_005"
+  species_detected:
+    - "roe_deer"
+    - "red_fox"
+    - "wild_boar"

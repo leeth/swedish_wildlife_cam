@@ -118,6 +118,117 @@ class GPSCoordinates(BaseModel):
         return v
 
 
+class GPSCluster(BaseModel):
+    """GPS proximity cluster for grouping nearby locations."""
+    cluster_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique cluster ID")
+    name: Optional[str] = Field(None, description="Human-readable cluster name")
+    center_latitude: float = Field(..., ge=-90, le=90, description="Cluster center latitude")
+    center_longitude: float = Field(..., ge=-180, le=180, description="Cluster center longitude")
+    radius_meters: float = Field(5.0, gt=0, description="Cluster radius in meters (5m = 10m diameter)")
+    point_count: int = Field(0, ge=0, description="Number of GPS points in cluster")
+    created_at: datetime = Field(default_factory=datetime.now, description="Cluster creation timestamp")
+    updated_at: datetime = Field(default_factory=datetime.now, description="Last update timestamp")
+    description: Optional[str] = Field(None, description="Cluster description")
+    is_named: bool = Field(False, description="Whether cluster has been manually named")
+    
+    @validator('center_latitude')
+    def validate_center_latitude(cls, v):
+        if v < -90 or v > 90:
+            raise ValueError('Center latitude must be between -90 and 90')
+        return v
+    
+    @validator('center_longitude')
+    def validate_center_longitude(cls, v):
+        if v < -180 or v > 180:
+            raise ValueError('Center longitude must be between -180 and 180')
+        return v
+
+
+class GPSClusterAssignment(BaseModel):
+    """Assignment of a GPS point to a cluster."""
+    assignment_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique assignment ID")
+    cluster_id: str = Field(..., description="Cluster ID")
+    observation_id: str = Field(..., description="Observation ID")
+    latitude: float = Field(..., ge=-90, le=90, description="GPS latitude")
+    longitude: float = Field(..., ge=-180, le=180, description="GPS longitude")
+    distance_to_center: float = Field(..., ge=0, description="Distance to cluster center in meters")
+    assigned_at: datetime = Field(default_factory=datetime.now, description="Assignment timestamp")
+    
+    @validator('latitude')
+    def validate_latitude(cls, v):
+        if v < -90 or v > 90:
+            raise ValueError('Latitude must be between -90 and 90')
+        return v
+    
+    @validator('longitude')
+    def validate_longitude(cls, v):
+        if v < -180 or v > 180:
+            raise ValueError('Longitude must be between -180 and 180')
+        return v
+
+
+class UnknownCluster(BaseModel):
+    """Unknown cluster that needs manual naming."""
+    cluster_id: str = Field(..., description="Cluster ID")
+    center_latitude: float = Field(..., description="Cluster center latitude")
+    center_longitude: float = Field(..., description="Cluster center longitude")
+    point_count: int = Field(..., ge=0, description="Number of points in cluster")
+    first_seen: datetime = Field(..., description="When cluster was first detected")
+    last_seen: datetime = Field(..., description="When cluster was last seen")
+    sample_observations: List[str] = Field(default_factory=list, description="Sample observation IDs")
+    
+    @validator('center_latitude')
+    def validate_center_latitude(cls, v):
+        if v < -90 or v > 90:
+            raise ValueError('Center latitude must be between -90 and 90')
+        return v
+    
+    @validator('center_longitude')
+    def validate_center_longitude(cls, v):
+        if v < -180 or v > 180:
+            raise ValueError('Center longitude must be between -180 and 180')
+        return v
+
+
+class ClusterBoundary(BaseModel):
+    """Cluster boundary information for mapping."""
+    cluster_id: str = Field(..., description="Cluster ID")
+    min_latitude: float = Field(..., description="Minimum latitude (southern boundary)")
+    max_latitude: float = Field(..., description="Maximum latitude (northern boundary)")
+    min_longitude: float = Field(..., description="Minimum longitude (western boundary)")
+    max_longitude: float = Field(..., description="Maximum longitude (eastern boundary)")
+    center_latitude: float = Field(..., description="Cluster center latitude")
+    center_longitude: float = Field(..., description="Cluster center longitude")
+    boundary_points: List[Tuple[float, float]] = Field(default_factory=list, description="Boundary points as (lat, lon) tuples")
+    convex_hull_points: List[Tuple[float, float]] = Field(default_factory=list, description="Convex hull points for mapping")
+    area_square_meters: Optional[float] = Field(None, description="Approximate area in square meters")
+    perimeter_meters: Optional[float] = Field(None, description="Approximate perimeter in meters")
+    
+    @validator('min_latitude')
+    def validate_min_latitude(cls, v):
+        if v < -90 or v > 90:
+            raise ValueError('Min latitude must be between -90 and 90')
+        return v
+    
+    @validator('max_latitude')
+    def validate_max_latitude(cls, v):
+        if v < -90 or v > 90:
+            raise ValueError('Max latitude must be between -90 and 90')
+        return v
+    
+    @validator('min_longitude')
+    def validate_min_longitude(cls, v):
+        if v < -180 or v > 180:
+            raise ValueError('Min longitude must be between -180 and 180')
+        return v
+    
+    @validator('max_longitude')
+    def validate_max_longitude(cls, v):
+        if v < -180 or v > 180:
+            raise ValueError('Max longitude must be between -180 and 180')
+        return v
+
+
 class ImageMetadata(BaseModel):
     """Image metadata and EXIF information."""
     file_path: Path = Field(..., description="Path to image file")

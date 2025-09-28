@@ -26,6 +26,7 @@ except ImportError as e:
 
 from .data_contracts import ObservationRecord, CompressedObservation, CameraInfo
 from .logging_config import get_logger
+from .cluster_service import ClusterService
 
 logger = get_logger("wildlife_pipeline.analytics_engine")
 
@@ -33,10 +34,11 @@ logger = get_logger("wildlife_pipeline.analytics_engine")
 class AnalyticsEngine:
     """High-performance analytics engine using Polars."""
     
-    def __init__(self, cache_dir: Optional[str] = None):
+    def __init__(self, cache_dir: Optional[str] = None, cluster_service: Optional[ClusterService] = None):
         self.cache_dir = Path(cache_dir) if cache_dir else Path.home() / ".wildlife_cache" / "analytics"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.logger = logger
+        self.cluster_service = cluster_service
         
         # Configure Polars for optimal performance
         pl.Config.set_streaming_chunk_size(8192)
@@ -367,6 +369,190 @@ class AnalyticsEngine:
         
         self.logger.info(f"✅ GPS report generated in {processing_time:.2f}s")
         return report
+    
+    def generate_cluster_aware_report(self, df: pl.DataFrame) -> Dict[str, Any]:
+        """Generate analytics report with GPS cluster data integration."""
+        self.logger.info("🗺️  Generating cluster-aware analytics report")
+        
+        if not self.cluster_service:
+            self.logger.warning("⚠️  No cluster service available, generating basic GPS report")
+            return self.generate_gps_report(df)
+        
+        start_time = time.time()
+        
+        # Get cluster data
+        cluster_stats = self.cluster_service.get_cluster_analytics()
+        cluster_boundaries = self.cluster_service.get_all_cluster_boundaries()
+        
+        # Basic GPS analysis
+        gps_report = self.generate_gps_report(df)
+        
+        # Cluster-specific analysis
+        cluster_analysis = self._analyze_species_by_cluster(df)
+        temporal_cluster_analysis = self._analyze_temporal_by_cluster(df)
+        activity_patterns = self._analyze_cluster_activity_patterns(df)
+        
+        # Combine all analysis
+        cluster_aware_report = {
+            "basic_gps_analysis": gps_report,
+            "cluster_statistics": cluster_stats,
+            "cluster_boundaries": cluster_boundaries,
+            "species_by_cluster": cluster_analysis,
+            "temporal_by_cluster": temporal_cluster_analysis,
+            "activity_patterns": activity_patterns,
+            "cluster_coverage": self._calculate_cluster_coverage(df),
+            "processing_time_seconds": time.time() - start_time
+        }
+        
+        self.logger.info(f"✅ Cluster-aware report generated in {time.time() - start_time:.2f}s")
+        return cluster_aware_report
+    
+    def _analyze_species_by_cluster(self, df: pl.DataFrame) -> Dict[str, Any]:
+        """Analyze species distribution by GPS cluster."""
+        if not self.cluster_service:
+            return {"error": "No cluster service available"}
+        
+        clusters = self.cluster_service.manager.get_all_clusters()
+        species_analysis = {}
+        
+        for cluster in clusters:
+            # Get assignments for this cluster
+            assignments = self.cluster_service.manager.get_cluster_assignments(cluster.cluster_id)
+            
+            if assignments:
+                # Analyze species in this cluster
+                cluster_species = {}
+                for assignment in assignments:
+                    # This would need to be connected to observation data
+                    # For now, return basic structure
+                    pass
+                
+                species_analysis[cluster.cluster_id] = {
+                    "cluster_name": cluster.name,
+                    "cluster_id": cluster.cluster_id,
+                    "point_count": cluster.point_count,
+                    "is_named": cluster.is_named,
+                    "center_latitude": cluster.center_latitude,
+                    "center_longitude": cluster.center_longitude,
+                    "species_diversity": 0,  # Would calculate from actual data
+                    "dominant_species": "unknown",  # Would determine from data
+                    "activity_level": "medium"  # Would calculate from data
+                }
+        
+        return {
+            "method": "species_by_cluster",
+            "description": "Species distribution analysis by GPS cluster",
+            "clusters_analyzed": len(clusters),
+            "named_clusters": len([c for c in clusters if c.is_named]),
+            "unknown_clusters": len([c for c in clusters if not c.is_named]),
+            "species_by_cluster": species_analysis
+        }
+    
+    def _analyze_temporal_by_cluster(self, df: pl.DataFrame) -> Dict[str, Any]:
+        """Analyze temporal patterns by cluster."""
+        if not self.cluster_service:
+            return {"error": "No cluster service available"}
+        
+        clusters = self.cluster_service.manager.get_all_clusters()
+        temporal_analysis = {}
+        
+        for cluster in clusters:
+            assignments = self.cluster_service.manager.get_cluster_assignments(cluster.cluster_id)
+            
+            if assignments:
+                # Analyze temporal patterns
+                timestamps = [a.assigned_at for a in assignments]
+                if timestamps:
+                    first_activity = min(timestamps)
+                    last_activity = max(timestamps)
+                    duration = last_activity - first_activity
+                    
+                    temporal_analysis[cluster.cluster_id] = {
+                        "cluster_name": cluster.name,
+                        "cluster_id": cluster.cluster_id,
+                        "first_activity": first_activity.isoformat(),
+                        "last_activity": last_activity.isoformat(),
+                        "activity_duration_days": duration.days,
+                        "activity_duration_hours": duration.total_seconds() / 3600,
+                        "point_count": cluster.point_count,
+                        "is_named": cluster.is_named
+                    }
+        
+        return {
+            "method": "temporal_by_cluster",
+            "description": "Temporal pattern analysis by GPS cluster",
+            "clusters_analyzed": len(clusters),
+            "temporal_by_cluster": temporal_analysis
+        }
+    
+    def _analyze_cluster_activity_patterns(self, df: pl.DataFrame) -> Dict[str, Any]:
+        """Analyze activity patterns across clusters."""
+        if not self.cluster_service:
+            return {"error": "No cluster service available"}
+        
+        clusters = self.cluster_service.manager.get_all_clusters()
+        named_clusters = [c for c in clusters if c.is_named]
+        unknown_clusters = [c for c in clusters if not c.is_named]
+        
+        # Calculate activity metrics
+        total_points = sum(c.point_count for c in clusters)
+        avg_points_per_cluster = total_points / len(clusters) if clusters else 0
+        
+        # Find most active clusters
+        most_active = sorted(clusters, key=lambda x: x.point_count, reverse=True)[:5]
+        
+        return {
+            "method": "cluster_activity_patterns",
+            "description": "Activity pattern analysis across GPS clusters",
+            "total_clusters": len(clusters),
+            "named_clusters": len(named_clusters),
+            "unknown_clusters": len(unknown_clusters),
+            "total_points": total_points,
+            "avg_points_per_cluster": round(avg_points_per_cluster, 2),
+            "naming_rate": len(named_clusters) / len(clusters) if clusters else 0,
+            "most_active_clusters": [
+                {
+                    "cluster_id": c.cluster_id,
+                    "name": c.name,
+                    "point_count": c.point_count,
+                    "is_named": c.is_named
+                }
+                for c in most_active
+            ]
+        }
+    
+    def _calculate_cluster_coverage(self, df: pl.DataFrame) -> Dict[str, Any]:
+        """Calculate cluster coverage statistics."""
+        if not self.cluster_service:
+            return {"error": "No cluster service available"}
+        
+        # Get GPS data
+        gps_columns = ["gps_latitude", "gps_longitude"]
+        if not all(col in df.columns for col in gps_columns):
+            return {"error": "GPS columns not found in data"}
+        
+        # Filter records with GPS data
+        gps_df = df.filter(
+            col("gps_latitude").is_not_null() & 
+            col("gps_longitude").is_not_null()
+        )
+        
+        if len(gps_df) == 0:
+            return {"error": "No GPS data found"}
+        
+        # Get cluster assignments
+        clusters = self.cluster_service.manager.get_all_clusters()
+        total_assignments = sum(len(self.cluster_service.manager.get_cluster_assignments(c.cluster_id)) for c in clusters)
+        
+        return {
+            "total_observations": len(df),
+            "gps_observations": len(gps_df),
+            "gps_coverage_percentage": len(gps_df) / len(df) * 100 if len(df) > 0 else 0,
+            "total_clusters": len(clusters),
+            "total_assignments": total_assignments,
+            "assignment_rate": total_assignments / len(gps_df) * 100 if len(gps_df) > 0 else 0,
+            "avg_points_per_cluster": total_assignments / len(clusters) if clusters else 0
+        }
     
     def export_to_parquet(self, df: pl.DataFrame, output_path: Union[str, Path]) -> None:
         """Export Polars DataFrame to Parquet with optimization."""

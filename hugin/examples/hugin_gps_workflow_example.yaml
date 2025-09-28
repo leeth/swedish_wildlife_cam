@@ -1,0 +1,93 @@
+# Hugin GPS Cluster Workflow Example
+# This file shows how to configure and run GPS cluster management workflows
+
+# Workflow metadata
+workflow:
+  name: "Wildlife Camera GPS Clustering"
+  version: "1.0"
+  description: "GPS cluster management workflow for wildlife camera data"
+  created_at: "2024-01-15T10:00:00Z"
+  author: "Hugin GPS Cluster Management"
+
+# Request unknown clusters for naming
+request_unknown:
+  enabled: true
+  limit: 50                      # Maximum number of clusters to return
+  min_points: 2                  # Minimum points per cluster
+  sort_by: "point_count"         # Sort by point_count, first_seen, last_seen
+  include_boundaries: true       # Include boundary information
+  include_analytics: true        # Include basic analytics
+
+# Cluster naming configuration
+cluster_names:
+  # Example cluster names - these would be filled by user
+  cluster_123:
+    name: "Deer Feeding Area"
+    description: "Main deer feeding location near water source"
+    notes: "High activity area with multiple deer sightings"
+    
+  cluster_456:
+    name: "Fox Den Area"
+    description: "Red fox denning and hunting area"
+    notes: "Consistent fox activity, likely den site"
+    
+  cluster_789:
+    name: "Wild Boar Wallow"
+    description: "Wild boar wallowing and feeding area"
+    notes: "Muddy area with boar tracks and wallowing signs"
+
+# Overlap detection configuration
+detect_overlaps:
+  enabled: true
+  threshold: 10.0                # Distance threshold in meters
+  min_clusters: 2                # Minimum clusters to consider for overlap
+  include_boundaries: true       # Include boundary analysis
+  export_overlaps: true          # Export overlap information
+
+# Merge requests for overlapping clusters
+merge_requests:
+  description: "Clusters that overlap and should be merged"
+  auto_merge: false              # Don't auto-merge, require manual approval
+  merges:
+    - cluster_ids: ["cluster_123", "cluster_456"]
+      new_name: "Wildlife Activity Zone"
+      new_description: "Combined deer and fox activity area"
+      reason: "Clusters are within 10m of each other and show complementary wildlife activity"
+      approval_required: true
+      
+    - cluster_ids: ["cluster_789", "cluster_101"]
+      new_name: "Boar and Fox Territory"
+      new_description: "Mixed wild boar and fox activity area"
+      reason: "Adjacent clusters with different species but similar habitat"
+      approval_required: true
+
+# Analytics configuration
+analytics:
+  include_cluster_analysis: true
+  species_by_cluster: true
+  temporal_by_cluster: true
+  activity_patterns: true
+  export_analytics: true
+  analytics_formats: ["json", "csv"]
+
+# Export configuration
+export:
+  formats: ["geojson", "kml", "json", "csv"]
+  output_dir: "exports"
+  include_metadata: true
+  include_statistics: true
+  include_boundaries: true
+
+# Quality control
+quality_control:
+  validate_names: true           # Validate cluster names
+  check_duplicates: true          # Check for duplicate names
+  validate_coordinates: true     # Validate GPS coordinates
+  min_description_length: 10     # Minimum description length
+
+# Integration settings
+integration:
+  update_analytics: true         # Update analytics after changes
+  regenerate_reports: true       # Regenerate reports after changes
+  notify_changes: true          # Notify about changes
+  backup_before_merge: true     # Backup before merging clusters

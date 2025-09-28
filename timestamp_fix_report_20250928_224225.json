@@ -1,0 +1,42 @@
+{
+  "summary": {
+    "timestamp": "2025-09-28T22:42:25.930619",
+    "total_files": 3,
+    "successful": 3,
+    "failed": 0,
+    "success_rate": 100.0,
+    "file_types": {
+      "image": 3
+    },
+    "errors": []
+  },
+  "detailed_results": [
+    {
+      "file": "test_input/test_image_1.jpg",
+      "file_type": "image",
+      "success": true,
+      "error": null,
+      "old_timestamp": "2024-01-01 10:30:00",
+      "new_timestamp": "2025-08-16 13:30:00",
+      "output_path": null
+    },
+    {
+      "file": "test_input/test_image_3.jpg",
+      "file_type": "image",
+      "success": true,
+      "error": null,
+      "old_timestamp": "2024-01-01 10:30:00",
+      "new_timestamp": "2025-08-16 13:30:00",
+      "output_path": null
+    },
+    {
+      "file": "test_input/test_image_2.jpg",
+      "file_type": "image",
+      "success": true,
+      "error": null,
+      "old_timestamp": "2024-01-01 10:30:00",
+      "new_timestamp": "2025-08-16 13:30:00",
+      "output_path": null
+    }
+  ]
+}

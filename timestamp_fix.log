@@ -1,0 +1,39 @@
+2025-09-28 22:35:13,602 - INFO - Output directory: test_output
+2025-09-28 22:35:13,608 - INFO - Found 3 files to process
+2025-09-28 22:35:13,608 - INFO - Processing: test_image_1.jpg
+2025-09-28 22:35:13,635 - ERROR - Could not read EXIF from test_input/test_image_1.jpg: [Errno 2] No such file or directory: b''
+2025-09-28 22:35:13,635 - WARNING - No timestamp found in test_image_1.jpg
+2025-09-28 22:35:13,635 - INFO - Processing: test_image_3.jpg
+2025-09-28 22:35:13,636 - ERROR - Could not read EXIF from test_input/test_image_3.jpg: [Errno 2] No such file or directory: b''
+2025-09-28 22:35:13,636 - WARNING - No timestamp found in test_image_3.jpg
+2025-09-28 22:35:13,636 - INFO - Processing: test_image_2.jpg
+2025-09-28 22:35:13,637 - ERROR - Could not read EXIF from test_input/test_image_2.jpg: [Errno 2] No such file or directory: b''
+2025-09-28 22:35:13,637 - WARNING - No timestamp found in test_image_2.jpg
+2025-09-28 22:35:13,649 - INFO - Detailed report saved to: timestamp_fix_report_20250928_223513.json
+2025-09-28 22:42:09,275 - INFO - Output directory: test_output
+2025-09-28 22:42:09,280 - INFO - Found 3 files to process
+2025-09-28 22:42:09,281 - INFO - Processing: test_image_1.jpg
+2025-09-28 22:42:09,310 - WARNING - No EXIF datetime found in test_input/test_image_1.jpg
+2025-09-28 22:42:09,311 - WARNING - No timestamp found in test_image_1.jpg
+2025-09-28 22:42:09,311 - INFO - Processing: test_image_3.jpg
+2025-09-28 22:42:09,312 - WARNING - No EXIF datetime found in test_input/test_image_3.jpg
+2025-09-28 22:42:09,312 - WARNING - No timestamp found in test_image_3.jpg
+2025-09-28 22:42:09,313 - INFO - Processing: test_image_2.jpg
+2025-09-28 22:42:09,314 - WARNING - No EXIF datetime found in test_input/test_image_2.jpg
+2025-09-28 22:42:09,314 - WARNING - No timestamp found in test_image_2.jpg
+2025-09-28 22:42:09,315 - INFO - Detailed report saved to: timestamp_fix_report_20250928_224209.json
+2025-09-28 22:42:25,884 - INFO - Output directory: test_output
+2025-09-28 22:42:25,891 - INFO - Found 3 files to process
+2025-09-28 22:42:25,892 - INFO - Processing: test_image_1.jpg
+2025-09-28 22:42:25,925 - INFO - test_image_1.jpg: Current timestamp: 2024-01-01 10:30:00
+2025-09-28 22:42:25,926 - INFO - test_image_1.jpg: Applying offset 593 days, 3:00:00: 2025-08-16 13:30:00
+2025-09-28 22:42:25,926 - INFO - test_image_1.jpg: [DRY RUN] Would update to: 2025-08-16 13:30:00
+2025-09-28 22:42:25,927 - INFO - Processing: test_image_3.jpg
+2025-09-28 22:42:25,927 - INFO - test_image_3.jpg: Current timestamp: 2024-01-01 10:30:00
+2025-09-28 22:42:25,928 - INFO - test_image_3.jpg: Applying offset 593 days, 3:00:00: 2025-08-16 13:30:00
+2025-09-28 22:42:25,928 - INFO - test_image_3.jpg: [DRY RUN] Would update to: 2025-08-16 13:30:00
+2025-09-28 22:42:25,928 - INFO - Processing: test_image_2.jpg
+2025-09-28 22:42:25,929 - INFO - test_image_2.jpg: Current timestamp: 2024-01-01 10:30:00
+2025-09-28 22:42:25,930 - INFO - test_image_2.jpg: Applying offset 593 days, 3:00:00: 2025-08-16 13:30:00
+2025-09-28 22:42:25,930 - INFO - test_image_2.jpg: [DRY RUN] Would update to: 2025-08-16 13:30:00
+2025-09-28 22:42:25,931 - INFO - Detailed report saved to: timestamp_fix_report_20250928_224225.json

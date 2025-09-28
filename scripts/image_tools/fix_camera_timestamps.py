@@ -8,13 +8,25 @@ Example: Camera set to 2024-01-01 but actual date should be 2025-09-07
 
 import argparse
 import sys
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict
 
 from PIL import Image
 from PIL.ExifTags import TAGS
 import piexif
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('timestamp_fix.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
 
 def parse_date_offset(offset_str: str) -> timedelta:
@@ -40,6 +52,7 @@ def parse_date_offset(offset_str: str) -> timedelta:
 def get_exif_datetime(image_path: Path) -> Optional[datetime]:
     """Extract datetime from EXIF data."""
     try:
+        logger.debug(f"Reading EXIF from {image_path}")
         with Image.open(image_path) as img:
             exif_dict = piexif.load(img.info.get('exif', b''))
             
@@ -53,11 +66,14 @@ def get_exif_datetime(image_path: Path) -> Optional[datetime]:
             for field in datetime_fields:
                 if field in exif_dict['0th']:
                     dt_str = exif_dict['0th'][field].decode('utf-8')
-                    return datetime.strptime(dt_str, '%Y:%m:%d %H:%M:%S')
+                    dt = datetime.strptime(dt_str, '%Y:%m:%d %H:%M:%S')
+                    logger.debug(f"Found {field}: {dt}")
+                    return dt
             
+            logger.warning(f"No EXIF datetime found in {image_path}")
             return None
     except Exception as e:
-        print(f"Warning: Could not read EXIF from {image_path}: {e}")
+        logger.error(f"Could not read EXIF from {image_path}: {e}")
         return None
 
 
@@ -102,7 +118,7 @@ def update_exif_datetime(image_path: Path, new_datetime: datetime, backup: bool 
         return False
 
 
-def process_image(image_path: Path, target_date: datetime, offset: timedelta, dry_run: bool = False) -> bool:
+def process_image(image_path: Path, target_date: datetime, offset: timedelta, output_dir: Optional[Path] = None, dry_run: bool = False, no_backup: bool = False) -> bool:
     """Process a single image to fix its timestamp."""
     print(f"\nProcessing: {image_path.name}")
     
@@ -128,8 +144,17 @@ def process_image(image_path: Path, target_date: datetime, offset: timedelta, dr
         print(f"  [DRY RUN] Would update to: {new_dt}")
         return True
     
+    # Determine output path
+    if output_dir:
+        # Preserve directory structure in output
+        output_path = output_dir / image_path.name
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        print(f"  Output will be saved to: {output_path}")
+    else:
+        output_path = image_path
+    
     # Update the image
-    success = update_exif_datetime(image_path, new_dt, backup=True)
+    success = update_exif_datetime(output_path, new_dt, backup=not no_backup)
     if success:
         print(f"  ✓ Updated successfully")
     else:
@@ -158,6 +183,9 @@ Examples:
 
   # Process specific file types
   python fix_camera_timestamps.py --extensions jpg jpeg --target-date "2025-09-07" /path/to/images/
+
+  # Process with output directory (preserves structure)
+  python fix_camera_timestamps.py --target-date "2025-09-07" --output-dir /path/to/output /path/to/images/
         """
     )
     
@@ -168,6 +196,7 @@ Examples:
     parser.add_argument('--offset-minutes', type=int, help='Add this many minutes to current EXIF datetime')
     parser.add_argument('--extensions', nargs='+', default=['jpg', 'jpeg', 'tiff', 'tif'], 
                        help='Image file extensions to process')
+    parser.add_argument('--output-dir', help='Output directory for processed files (preserves directory structure)')
     parser.add_argument('--dry-run', action='store_true', help='Show what would be changed without modifying files')
     parser.add_argument('--no-backup', action='store_true', help='Skip creating backup files')
     
@@ -224,6 +253,13 @@ Examples:
     if args.dry_run:
         print("DRY RUN MODE - No files will be modified")
     
+    # Create output directory if specified
+    output_dir = None
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Output directory: {output_dir}")
+    
     # Process images
     success_count = 0
     for image_path in image_paths:
@@ -232,7 +268,9 @@ Examples:
                 image_path, 
                 target_date, 
                 offset, 
-                dry_run=args.dry_run
+                output_dir=output_dir,
+                dry_run=args.dry_run,
+                no_backup=args.no_backup
             )
             if success:
                 success_count += 1

@@ -1,0 +1,56 @@
+# GPS Cluster Configuration for Hugin
+# This file configures the GPS clustering system for wildlife camera data
+
+# Database configuration
+database:
+  path: "data/clusters.db"  # SQLite database path
+  # Note: Database files are excluded from Git via .gitignore
+
+# Clustering parameters
+clustering:
+  radius_meters: 5.0        # Cluster radius (5m = 10m diameter)
+  min_points: 1             # Minimum points to form a cluster
+  max_distance: 10.0        # Maximum distance for point assignment
+
+# Export settings
+export:
+  formats: ["geojson", "kml", "json"]  # Supported export formats
+  output_dir: "exports"                # Default export directory
+  include_boundaries: true             # Include boundary calculations
+  include_metadata: true              # Include cluster metadata
+
+# Logging configuration
+logging:
+  level: "INFO"                        # Logging level (DEBUG, INFO, WARNING, ERROR)
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/cluster.log"             # Optional log file
+
+# Processing settings
+processing:
+  batch_size: 1000                     # Process observations in batches
+  parallel_workers: 4                 # Number of parallel workers
+  memory_limit_mb: 1024              # Memory limit for processing
+
+# Mapping settings
+mapping:
+  default_zoom: 15                    # Default map zoom level
+  cluster_colors:
+    named: "#2E8B57"                  # Green for named clusters
+    unknown: "#FF6347"                 # Red for unknown clusters
+  boundary_styles:
+    stroke_color: "#000000"
+    stroke_width: 2
+    fill_opacity: 0.3
+
+# Cluster naming workflow
+naming:
+  auto_suggest: true                   # Auto-suggest names based on location
+  require_description: false           # Require description when naming
+  max_name_length: 50                 # Maximum cluster name length
+  allowed_characters: "a-zA-Z0-9_- "  # Allowed characters in names
+
+# Quality control
+quality:
+  min_accuracy_meters: 10.0          # Minimum GPS accuracy required
+  max_age_days: 365                   # Maximum age of observations to process
+  outlier_threshold: 100.0            # Distance threshold for outlier detection
