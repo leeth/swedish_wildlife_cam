@@ -28,17 +28,17 @@ docker-compose -f docker-compose.local.yml ps
 
 ```bash
 # Test with local configuration
-./scripts/odin --config odin.local.yaml infrastructure status
+src/odin/cli.py --config conf/profiles/local.yaml infrastructure status
 
 # Run complete pipeline
-./scripts/odin --config odin.local.yaml pipeline run
+src/odin/cli.py --config conf/profiles/local.yaml pipeline run
 ```
 
 ### 3. Run Local Tests
 
 ```bash
 # Run comprehensive local tests
-./scripts/test_local_odin.sh
+scripts/testing/test_local_odin.sh
 ```
 
 ## 📋 Available Services
@@ -65,7 +65,7 @@ docker-compose -f docker-compose.local.yml ps
 
 ## 🔧 Configuration
 
-### Local Configuration (`odin.local.yaml`)
+### Local Configuration (`conf/profiles/local.yaml`)
 
 ```yaml
 infrastructure:
@@ -123,25 +123,25 @@ docker-compose -f docker-compose.local.yml logs
 ### Unit Tests
 ```bash
 # Run unit tests
-./scripts/run_tests.sh
+scripts/testing/run_tests.sh
 ```
 
 ### Integration Tests
 ```bash
 # Run local integration tests
-./scripts/test_local_odin.sh
+scripts/testing/test_local_odin.sh
 ```
 
 ### Manual Testing
 ```bash
 # Test infrastructure
-./scripts/odin --config odin.local.yaml infrastructure status
+src/odin/cli.py --config conf/profiles/local.yaml infrastructure status
 
 # Test pipeline
-./scripts/odin --config odin.local.yaml pipeline run
+src/odin/cli.py --config conf/profiles/local.yaml pipeline run
 
 # Test data management
-./scripts/odin --config odin.local.yaml data list
+src/odin/cli.py --config conf/profiles/local.yaml data list
 ```
 
 ## 🗑️ Cleanup

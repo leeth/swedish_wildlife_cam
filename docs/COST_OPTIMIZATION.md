@@ -13,7 +13,7 @@ aws configure
 pip install -r requirements.txt
 
 # Install Munin and Hugin
-cd munin/ && pip install -e .
+cd src/munin/ && pip install -e .
 cd ../hugin/ && pip install -e .
 ```
 
@@ -49,15 +49,15 @@ python scripts/infrastructure/deploy_cost_optimized_infrastructure.py --lambda
 ### Run Complete Cost-Optimized Pipeline
 ```bash
 # Process images with cost optimization
-./scripts/run_cost_optimized_pipeline.sh /path/to/images/*.jpg
+scripts/infrastructure/run_cost_optimized_pipeline.sh /path/to/images/*.jpg
 
 # Process videos with custom output directory
-./scripts/run_cost_optimized_pipeline.sh \
+scripts/infrastructure/run_cost_optimized_pipeline.sh \
   --local-output ./results \
   /path/to/videos/*.mp4
 
 # High priority processing
-./scripts/run_cost_optimized_pipeline.sh \
+scripts/infrastructure/run_cost_optimized_pipeline.sh \
   --priority high \
   /path/to/urgent/data/*.jpg
 ```
@@ -65,7 +65,7 @@ python scripts/infrastructure/deploy_cost_optimized_infrastructure.py --lambda
 ### Download Existing Stage 3 Output
 ```bash
 # Download Stage 3 output from cloud
-./scripts/run_cost_optimized_pipeline.sh \
+scripts/infrastructure/run_cost_optimized_pipeline.sh \
   --download-only \
   --local-output ./stage3_results
 ```
@@ -73,7 +73,7 @@ python scripts/infrastructure/deploy_cost_optimized_infrastructure.py --lambda
 ### Analyze Local Stage 3 Data
 ```bash
 # Analyze downloaded Stage 3 data
-./scripts/run_cost_optimized_pipeline.sh \
+scripts/infrastructure/run_cost_optimized_pipeline.sh \
   --analyze-only \
   --local-output ./stage3_results
 ```
@@ -81,10 +81,10 @@ python scripts/infrastructure/deploy_cost_optimized_infrastructure.py --lambda
 ### Check Infrastructure Status
 ```bash
 # Check compute environment status
-./scripts/run_cost_optimized_pipeline.sh --status
+scripts/infrastructure/run_cost_optimized_pipeline.sh --status
 
 # Check cost metrics
-./scripts/run_cost_optimized_pipeline.sh --costs
+scripts/infrastructure/run_cost_optimized_pipeline.sh --costs
 ```
 
 ## 🔧 Advanced Usage

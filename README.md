@@ -64,16 +64,16 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 ### Lokal Udvikling
 ```bash
 # Odin - Infrastruktur Management
-./scripts/odin --config odin.local.yaml infrastructure setup
-./scripts/odin --config odin.local.yaml pipeline run
+src/odin/cli.py --config conf/profiles/local.yaml infrastructure setup
+src/odin/cli.py --config conf/profiles/local.yaml pipeline run
 
 # Munin - Data Indtagelse
-cd munin/
+cd src/munin/
 pip install -e .
 munin ingest /path/to/images /path/to/output
 
 # Hugin - Analyse
-cd hugin/
+cd src/hugin/
 pip install -e .
 hugin analyze /path/to/data
 ```
@@ -81,50 +81,63 @@ hugin analyze /path/to/data
 ### Cloud Deployment
 ```bash
 # Odin - AWS Infrastructure
-./scripts/odin --config odin.yaml infrastructure setup
-./scripts/odin --config odin.yaml pipeline run
+src/odin/cli.py --config conf/profiles/cloud.yaml infrastructure setup
+src/odin/cli.py --config conf/profiles/cloud.yaml pipeline run
 
 # AWS Setup (Legacy)
-./scripts/infrastructure/deploy_aws_infrastructure.py
-./scripts/infrastructure/create_aws_test_user.py
+scripts/infrastructure/deploy_aws_infrastructure.py
+scripts/infrastructure/create_aws_test_user.py
 
 # Deploy to AWS Batch
-odin batch --input s3://your-bucket/input --output s3://your-bucket/output
+src/odin/cli.py batch --input s3://your-bucket/input --output s3://your-bucket/output
 ```
 
 ## 📁 Projekt Struktur
 
 ```
-├── munin/                    # Memory Keeper (Data Indtagelse)
-│   ├── src/munin/           # Core Munin moduler
-│   ├── pyproject.toml      # Munin dependencies
-│   └── README.md           # Munin dokumentation
-├── hugin/                   # Thought Bringer (Analyse)
-│   ├── src/hugin/          # Core Hugin moduler
-│   ├── pyproject.toml      # Hugin dependencies
-│   └── README.md           # Hugin dokumentation
-├── src/odin/                # All-Father (Infrastruktur)
-│   ├── cli.py              # Odin CLI interface
-│   ├── config.py           # Configuration management
-│   ├── infrastructure.py  # AWS infrastructure
-│   ├── pipeline.py         # Pipeline orchestration
-│   ├── local_infrastructure.py # Local infrastructure
-│   └── local_pipeline.py   # Local pipeline
+├── src/                     # Source code
+│   ├── odin/               # All-Father (Infrastruktur)
+│   │   ├── cli.py          # Odin CLI interface
+│   │   ├── config.py       # Configuration management
+│   │   ├── infrastructure.py # AWS infrastructure
+│   │   ├── pipeline.py     # Pipeline orchestration
+│   │   ├── local_infrastructure.py # Local infrastructure
+│   │   └── local_pipeline.py # Local pipeline
+│   ├── munin/              # Memory Keeper (Data Indtagelse)
+│   │   ├── cli.py          # Munin CLI interface
+│   │   ├── data_ingestion.py # Data ingestion
+│   │   ├── detection_filter.py # Detection filtering
+│   │   └── swedish_wildlife_detector.py # Swedish wildlife detection
+│   └── hugin/              # Thought Bringer (Analyse)
+│       ├── cli.py          # Hugin CLI interface
+│       ├── analytics_engine.py # Analytics engine
+│       ├── cluster_service.py # Cluster management
+│       └── gps_clustering.py # GPS clustering
+├── conf/                    # Configuration
+│   ├── profiles/           # Environment profiles
+│   │   ├── local.yaml     # Local configuration
+│   │   └── cloud.yaml     # Cloud configuration
+│   ├── aws/                # AWS configurations
+│   ├── docker/             # Docker configurations
+│   └── logging.yaml        # Logging configuration
 ├── scripts/                 # Utility scripts
-│   ├── odin                # Main Odin CLI
-│   ├── test_local_odin.sh  # Local testing
+│   ├── cli/                # CLI tools
 │   ├── infrastructure/     # AWS/cloud setup
-│   ├── image_tools/        # Billedbehandling utilities
-│   └── data_upload/        # Cloud data management
-├── docker-compose.local.yml # Local infrastructure
-├── odin.yaml               # AWS configuration
-├── odin.local.yaml         # Local configuration
-└── docs/                   # Dokumentation
-    ├── ROADMAP.md          # Udviklings roadmap
-    ├── INFRASTRUCTURE.md   # Setup og deployment
-    ├── LOCAL_SETUP.md      # Local development
-    ├── COST_OPTIMIZATION.md # Cost optimization
-    └── UTILITIES.md        # Tools og utilities
+│   ├── testing/           # Test utilities
+│   └── demo/              # Demo scripts
+├── test/                   # Test files
+│   ├── unit/              # Unit tests
+│   ├── data/              # Test data
+│   └── input/             # Test input
+├── docs/                   # Dokumentation
+│   ├── ROADMAP.md          # Udviklings roadmap
+│   ├── INFRASTRUCTURE.md   # Setup og deployment
+│   ├── LOCAL_SETUP.md      # Local development
+│   ├── COST_OPTIMIZATION.md # Cost optimization
+│   ├── UTILITIES.md        # Tools og utilities
+│   ├── PLANTUML_DIAGRAMS.md # PlantUML diagrams
+│   └── diagrams/           # PlantUML diagram files
+└── logs/                   # Log files
 ```
 
 ## 🐦‍⬛ Munin (Memory Keeper)
@@ -231,24 +244,24 @@ python -m hugin.hugin_gps_cluster_management cluster submit-names labels.yaml
 **CLI Kommandoer**:
 ```bash
 # Infrastructure Management
-./scripts/odin --config odin.local.yaml infrastructure setup
-./scripts/odin --config odin.local.yaml infrastructure teardown
-./scripts/odin --config odin.local.yaml infrastructure status
+src/odin/cli.py --config conf/profiles/local.yaml infrastructure setup
+src/odin/cli.py --config conf/profiles/local.yaml infrastructure teardown
+src/odin/cli.py --config conf/profiles/local.yaml infrastructure status
 
 # Pipeline Execution
-./scripts/odin --config odin.local.yaml pipeline run
-./scripts/odin --config odin.local.yaml pipeline stage1
-./scripts/odin --config odin.local.yaml pipeline stage2
-./scripts/odin --config odin.local.yaml pipeline stage3
+src/odin/cli.py --config conf/profiles/local.yaml pipeline run
+src/odin/cli.py --config conf/profiles/local.yaml pipeline stage1
+src/odin/cli.py --config conf/profiles/local.yaml pipeline stage2
+src/odin/cli.py --config conf/profiles/local.yaml pipeline stage3
 
 # Data Management
-./scripts/odin --config odin.local.yaml data upload
-./scripts/odin --config odin.local.yaml data download
-./scripts/odin --config odin.local.yaml data list
+src/odin/cli.py --config conf/profiles/local.yaml data upload
+src/odin/cli.py --config conf/profiles/local.yaml data download
+src/odin/cli.py --config conf/profiles/local.yaml data list
 
 # Cost Management
-./scripts/odin --config odin.local.yaml cost report
-./scripts/odin --config odin.local.yaml cost optimize
+src/odin/cli.py --config conf/profiles/local.yaml cost report
+src/odin/cli.py --config conf/profiles/local.yaml cost optimize
 ```
 
 ## 🛠️ Teknologi Stack

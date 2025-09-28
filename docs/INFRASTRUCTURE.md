@@ -13,28 +13,28 @@ python --version
 git --version
 
 # Odin CLI (for infrastructure management)
-odin --version
+src/odin/cli.py --version
 
 # Munin CLI (for data processing)
-munin --version
+src/munin/cli.py --version
 
 # Hugin CLI (for analytics)
-hugin --version
+src/hugin/cli.py --version
 ```
 
 ### AWS Setup
 ```bash
 # Configure Odin
-odin config setup
+src/odin/cli.py config setup
 
 # Deploy infrastructure
-./scripts/infrastructure/deploy_aws_infrastructure.py
+scripts/infrastructure/deploy_aws_infrastructure.py
 
 # Create test user
-./scripts/infrastructure/create_aws_test_user.py
+scripts/infrastructure/create_aws_test_user.py
 
 # Test AWS access
-./scripts/infrastructure/test_aws_setup.py
+scripts/infrastructure/test_aws_setup.py
 ```
 
 ### Local Development Setup
@@ -52,7 +52,7 @@ source .venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 
 # Install Munin
-cd munin/
+cd src/munin/
 pip install -e .
 
 # Install Hugin
@@ -131,16 +131,16 @@ reporting:
 ### AWS Setup
 ```bash
 # Configure Odin
-odin config setup
+src/odin/cli.py config setup
 
 # Deploy infrastructure
-./scripts/infrastructure/deploy_aws_infrastructure.py
+scripts/infrastructure/deploy_aws_infrastructure.py
 
 # Create test user
-./scripts/infrastructure/create_aws_test_user.py
+scripts/infrastructure/create_aws_test_user.py
 
 # Test AWS access
-./scripts/infrastructure/test_aws_setup.py
+scripts/infrastructure/test_aws_setup.py
 ```
 
 ### AWS Configuration
@@ -170,8 +170,8 @@ models:
 ### Build Images
 ```bash
 # Build images using Odin
-odin infrastructure build --component munin
-odin infrastructure build --component hugin
+src/odin/cli.py infrastructure build --component munin
+src/odin/cli.py infrastructure build --component hugin
 ```
 
 ### Run Containers

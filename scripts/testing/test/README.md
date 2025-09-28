@@ -2,6 +2,14 @@
 
 This directory contains test scripts for validating the wildlife pipeline.
 
+## 📁 Project Structure
+
+This test directory is part of the main Odins Ravne project structure:
+- **Source Code**: `src/`
+- **Configuration**: `conf/`
+- **Scripts**: `scripts/`
+- **Tests**: `test/` (main test directory)
+
 ## Scripts
 
 ### `test_classification_improvement.py`
@@ -96,11 +104,11 @@ python test_wildlife_detection.py
 
 ```bash
 # Run all tests
-python -m pytest scripts/test/
+python -m pytest test/unit/
 
 # Run specific test
-python scripts/test/test_wildlife_detection.py
+python test/unit/test_wildlife_detection.py
 
 # Run with verbose output
-python -m pytest scripts/test/ -v
+python -m pytest test/unit/ -v
 ```

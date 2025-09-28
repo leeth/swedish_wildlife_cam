@@ -19,12 +19,13 @@ In Norse mythology, Hugin (Thought) was one of Odin's ravens who brought back th
 ### Installation
 
 ```bash
-# Install Hugin
-pip install hugin
+# Install Hugin from main project
+cd src/hugin/
+pip install -e .
 
 # Or install from source
-git clone https://github.com/odins-ravne/hugin.git
-cd hugin
+git clone https://github.com/leeth/swedish_wildlife_cam.git
+cd swedish_wildlife_cam/src/hugin
 pip install -e .
 ```
 
@@ -111,7 +112,7 @@ Hugin uses Polars for lightning-fast data processing:
 
 ## Configuration
 
-### Local Profile (`profiles/local.yaml`)
+### Local Profile (`conf/profiles/local.yaml`)
 ```yaml
 storage:
   adapter: "local"
@@ -128,7 +129,7 @@ visualization:
   theme: "dark"
 ```
 
-### Cloud Profile (`profiles/cloud.yaml`)
+### Cloud Profile (`conf/profiles/cloud.yaml`)
 ```yaml
 storage:
   adapter: "s3"
@@ -213,13 +214,13 @@ Hugin provides multiple visualization options:
 ### Testing
 ```bash
 # Run all tests
-pytest tests/ -v
+pytest test/unit/ -v
 
 # Run analytics tests
-pytest tests/test_analytics.py -v
+pytest test/unit/test_analytics.py -v
 
 # Run visualization tests
-pytest tests/test_visualization.py -v
+pytest test/unit/test_visualization.py -v
 ```
 
 ### Development Setup
@@ -234,8 +235,8 @@ pip install -r requirements-dev.txt
 pip install -r requirements-viz.txt
 
 # Run linting
-ruff check src/ tests/
-black src/ tests/
+ruff check src/hugin/ test/unit/
+black src/hugin/ test/unit/
 ```
 
 ## Documentation
@@ -255,9 +256,9 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/odins-ravne/hugin/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/odins-ravne/hugin/discussions)
-- **Documentation**: [Read the Docs](https://hugin.readthedocs.io)
+- **Issues**: [GitHub Issues](https://github.com/leeth/swedish_wildlife_cam/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/leeth/swedish_wildlife_cam/discussions)
+- **Documentation**: [Project Documentation](docs/)
 
 ---
 

@@ -15,10 +15,10 @@ This feature is designed specifically for processing data from offline cameras w
 ### Basic Usage
 ```bash
 # Process offline camera data with cost optimization
-./scripts/run_offline_camera_batch.sh file:///data/camera1 s3://bucket/output
+scripts/infrastructure/run_offline_camera_batch.sh file:///data/camera1 s3://bucket/output
 
 # With local Stage 3 output download
-./scripts/run_offline_camera_batch.sh \
+scripts/infrastructure/run_offline_camera_batch.sh \
   --local-output ./results \
   --download-stage3 \
   file:///data/camera1 s3://bucket/output
@@ -60,10 +60,10 @@ python src/munin/cloud/cli.py --profile cloud batch \
 ### Process Single Camera
 ```bash
 # Basic processing
-./scripts/run_offline_camera_batch.sh file:///data/camera1 s3://bucket/output
+scripts/infrastructure/run_offline_camera_batch.sh file:///data/camera1 s3://bucket/output
 
 # With cost optimization settings
-./scripts/run_offline_camera_batch.sh \
+scripts/infrastructure/run_offline_camera_batch.sh \
   --spot-bid-percentage 80 \
   --max-vcpus 200 \
   --cost-report \
@@ -73,13 +73,13 @@ python src/munin/cloud/cli.py --profile cloud batch \
 ### Process Multiple Cameras
 ```bash
 # Process camera 1
-./scripts/run_offline_camera_batch.sh \
+scripts/infrastructure/run_offline_camera_batch.sh \
   --local-output ./camera1_results \
   --download-stage3 \
   file:///data/camera1 s3://bucket/camera1_output
 
 # Process camera 2
-./scripts/run_offline_camera_batch.sh \
+scripts/infrastructure/run_offline_camera_batch.sh \
   --local-output ./camera2_results \
   --download-stage3 \
   file:///data/camera2 s3://bucket/camera2_output
@@ -88,7 +88,7 @@ python src/munin/cloud/cli.py --profile cloud batch \
 ### Advanced Configuration
 ```bash
 # High priority processing with custom settings
-./scripts/run_offline_camera_batch.sh \
+scripts/infrastructure/run_offline_camera_batch.sh \
   --priority high \
   --spot-bid-percentage 90 \
   --max-vcpus 500 \
@@ -183,7 +183,7 @@ mkdir -p data/camera1 data/camera2 data/camera3
 
 # 2. Process each camera with cost optimization
 for camera in camera1 camera2 camera3; do
-  ./scripts/run_offline_camera_batch.sh \
+  scripts/infrastructure/run_offline_camera_batch.sh \
     --local-output ./results/$camera \
     --download-stage3 \
     file:///data/$camera s3://bucket/$camera_output

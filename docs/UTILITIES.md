@@ -31,19 +31,19 @@ scripts/
 ### AWS Infrastructure Deployment
 ```bash
 # Deploy complete AWS infrastructure
-./scripts/infrastructure/deploy_aws_infrastructure.py \
+scripts/infrastructure/deploy_aws_infrastructure.py \
   --region eu-north-1 \
   --bucket-name odins-ravne-data \
   --gpu-enabled \
   --spot-instances
 
 # Create test user with minimal permissions
-./scripts/infrastructure/create_aws_test_user.py \
+scripts/infrastructure/create_aws_test_user.py \
   --username wildlife-test \
   --permissions s3,batch,ecr
 
 # Test AWS setup
-./scripts/infrastructure/test_aws_setup.py \
+scripts/infrastructure/test_aws_setup.py \
   --test-s3 \
   --test-batch \
   --test-ecr
@@ -52,7 +52,7 @@ scripts/
 ### Monitoring Deployment
 ```bash
 # Deploy CloudWatch monitoring
-./scripts/infrastructure/deploy_monitoring.py \
+scripts/infrastructure/deploy_monitoring.py \
   --cloudwatch \
   --alerts \
   --dashboards \
@@ -64,14 +64,14 @@ scripts/
 ### Camera Timestamp Correction
 ```bash
 # Fix camera timestamps
-./scripts/image_tools/fix_camera_timestamps.py \
+scripts/image_tools/fix_camera_timestamps.py \
   --input /path/to/images \
   --target-date "2025-09-07" \
   --extensions jpg,jpeg,tiff \
   --backup
 
 # Test timestamp fix
-./scripts/image_tools/test_timestamp_fix.py \
+scripts/image_tools/test_timestamp_fix.py \
   --input /path/to/test/images \
   --expected-date "2025-09-07"
 ```
@@ -79,27 +79,27 @@ scripts/
 ### GPS and Location Tools
 ```bash
 # Test GPS extraction
-./scripts/image_tools/test_gps_sqlite.py \
+scripts/image_tools/test_gps_sqlite.py \
   --input /path/to/images \
   --database location_classifier.db
 
 # Test location classification
-./scripts/image_tools/test_location_tools.py \
+scripts/image_tools/test_location_tools.py \
   --input /path/to/images \
   --radius 10 \
   --output locations.json
 
 # Classify images by location
-python -m src.wildlife_pipeline.tools.location_classifier classify \
+python -m src.munin.tools.location_classifier classify \
   /path/to/images \
   --sd-card SD001 \
   --recursive
 
 # Interactive location labeling
-python -m src.wildlife_pipeline.tools.location_labeler --interactive
+python -m src.munin.tools.location_labeler --interactive
 
 # Move classified images to cloud
-python -m src.wildlife_pipeline.tools.location_classifier move \
+python -m src.munin.tools.location_classifier move \
   /path/to/images \
   s3://my-bucket/wildlife-images/ \
   --dry-run
@@ -110,14 +110,14 @@ python -m src.wildlife_pipeline.tools.location_classifier move \
 ### S3 Upload
 ```bash
 # Upload data to S3
-./scripts/data_upload/upload_to_s3.py \
+scripts/data_upload/upload_to_s3.py \
   --local-path /path/to/data \
   --s3-bucket odins-ravne-data \
   --s3-prefix wildlife-data/ \
   --parallel-uploads 10
 
 # Sync data between local and S3
-./scripts/data_upload/sync_data.py \
+scripts/data_upload/sync_data.py \
   --local-path /path/to/data \
   --s3-bucket odins-ravne-data \
   --direction both \
@@ -127,7 +127,7 @@ python -m src.wildlife_pipeline.tools.location_classifier move \
 ### Data Backup
 ```bash
 # Backup data to multiple locations
-./scripts/data_upload/backup_data.py \
+scripts/data_upload/backup_data.py \
   --source /path/to/data \
   --destinations s3://backup-bucket,gs://backup-bucket \
   --compression gzip \
@@ -139,14 +139,14 @@ python -m src.wildlife_pipeline.tools.location_classifier move \
 ### Performance Testing
 ```bash
 # Run performance tests
-./scripts/testing/performance_test.py \
+scripts/testing/performance_test.py \
   --instance-type g4dn.xlarge \
   --batch-size 32 \
   --image-count 1000 \
   --output results.json
 
 # Test different configurations
-./scripts/testing/performance_test.py \
+scripts/testing/performance_test.py \
   --config-file test_configs.yaml \
   --compare-results
 ```
@@ -154,7 +154,7 @@ python -m src.wildlife_pipeline.tools.location_classifier move \
 ### Cost Analysis
 ```bash
 # Analyze processing costs
-./scripts/testing/cost_analysis.py \
+scripts/testing/cost_analysis.py \
   --timeframe 30 \
   --instance-types g4dn.xlarge,g4dn.2xlarge \
   --optimization-suggestions \
@@ -164,7 +164,7 @@ python -m src.wildlife_pipeline.tools.location_classifier move \
 ### Integration Testing
 ```bash
 # Run integration tests
-./scripts/testing/integration_test.py \
+scripts/testing/integration_test.py \
   --test-pipeline \
   --test-cloud \
   --test-database \
@@ -176,7 +176,7 @@ python -m src.wildlife_pipeline.tools.location_classifier move \
 ### Data Conversion
 ```python
 # Parquet to SQLite conversion
-from src.wildlife_pipeline.tools.parquet_to_sqlite import ParquetToSQLiteConverter
+from src.munin.tools.parquet_to_sqlite import ParquetToSQLiteConverter
 
 converter = ParquetToSQLiteConverter()
 converter.convert(
@@ -189,7 +189,7 @@ converter.convert(
 ### Location Classification
 ```python
 # Location classification
-from src.wildlife_pipeline.tools.location_classifier import LocationClassifier
+from src.munin.tools.location_classifier import LocationClassifier
 
 classifier = LocationClassifier(radius=10)  # 10 meter radius
 locations = classifier.classify_images("/path/to/images")
@@ -198,7 +198,7 @@ locations = classifier.classify_images("/path/to/images")
 ### Location Labeling
 ```python
 # Interactive location labeling
-from src.wildlife_pipeline.tools.location_labeler import LocationLabeler
+from src.munin.tools.location_labeler import LocationLabeler
 
 labeler = LocationLabeler()
 labeler.start_labeling_session(
@@ -239,14 +239,14 @@ compressed = compressor.compress_observations(
 ### Docker Management
 ```bash
 # Build and push Docker images
-./scripts/deployment/build_docker_images.py \
+scripts/deployment/build_docker_images.py \
   --munin \
   --hugin \
   --gpu-enabled \
   --push-to-ecr
 
 # Deploy to AWS Batch
-./scripts/deployment/deploy_to_batch.py \
+scripts/deployment/deploy_to_batch.py \
   --job-definition wildlife-pipeline \
   --image-uri 123456789012.dkr.ecr.eu-north-1.amazonaws.com/odins-ravne/munin:latest
 ```
@@ -254,13 +254,13 @@ compressed = compressor.compress_observations(
 ### Configuration Management
 ```bash
 # Generate configuration files
-./scripts/configuration/generate_configs.py \
+scripts/configuration/generate_configs.py \
   --environment production \
   --region eu-north-1 \
   --output-dir ./configs/
 
 # Validate configuration
-./scripts/configuration/validate_configs.py \
+scripts/configuration/validate_configs.py \
   --config-file ./configs/production.yaml \
   --check-aws-access
 ```
@@ -270,7 +270,7 @@ compressed = compressor.compress_observations(
 ### Log Analysis
 ```bash
 # Analyze processing logs
-./scripts/debugging/analyze_logs.py \
+scripts/debugging/analyze_logs.py \
   --log-file logs/munin.log \
   --error-patterns \
   --performance-metrics \
@@ -280,7 +280,7 @@ compressed = compressor.compress_observations(
 ### Data Validation
 ```bash
 # Validate data integrity
-./scripts/debugging/validate_data.py \
+scripts/debugging/validate_data.py \
   --data-path /path/to/data \
   --check-images \
   --check-metadata \
@@ -290,7 +290,7 @@ compressed = compressor.compress_observations(
 ### Performance Profiling
 ```bash
 # Profile performance
-./scripts/debugging/profile_performance.py \
+scripts/debugging/profile_performance.py \
   --script-path src/munin/process_images.py \
   --input-path /path/to/images \
   --output-profile profile.json
@@ -301,7 +301,7 @@ compressed = compressor.compress_observations(
 ### System Monitoring
 ```bash
 # Monitor system resources
-./scripts/monitoring/system_monitor.py \
+scripts/monitoring/system_monitor.py \
   --cpu \
   --memory \
   --gpu \
@@ -312,7 +312,7 @@ compressed = compressor.compress_observations(
 ### Wildlife Monitoring
 ```bash
 # Monitor wildlife detection
-./scripts/monitoring/wildlife_monitor.py \
+scripts/monitoring/wildlife_monitor.py \
   --species moose,boar,roedeer \
   --time-window 24h \
   --alert-threshold 10
@@ -323,7 +323,7 @@ compressed = compressor.compress_observations(
 ### Database Maintenance
 ```bash
 # Optimize database
-./scripts/maintenance/optimize_database.py \
+scripts/maintenance/optimize_database.py \
   --database-path data.db \
   --vacuum \
   --reindex \
@@ -333,7 +333,7 @@ compressed = compressor.compress_observations(
 ### Cleanup Tools
 ```bash
 # Clean up old data
-./scripts/maintenance/cleanup_data.py \
+scripts/maintenance/cleanup_data.py \
   --data-path /path/to/data \
   --older-than 90 \
   --backup-before-delete
@@ -342,7 +342,7 @@ compressed = compressor.compress_observations(
 ### Backup Tools
 ```bash
 # Create backup
-./scripts/maintenance/create_backup.py \
+scripts/maintenance/create_backup.py \
   --source /path/to/data \
   --destination /path/to/backup \
   --compression gzip \
@@ -354,37 +354,37 @@ compressed = compressor.compress_observations(
 ### Complete Workflow
 ```bash
 # 1. Setup infrastructure
-./scripts/infrastructure/deploy_aws_infrastructure.py
+scripts/infrastructure/deploy_aws_infrastructure.py
 
 # 2. Fix camera timestamps
-./scripts/image_tools/fix_camera_timestamps.py --input /images --target-date "2025-09-07"
+scripts/image_tools/fix_camera_timestamps.py --input /images --target-date "2025-09-07"
 
 # 3. Process images
-munin ingest /images /output --extensions jpg,mp4
+src/munin/cli.py ingest /images /output --extensions jpg,mp4
 
 # 4. Upload to cloud
-./scripts/data_upload/upload_to_s3.py --local-path /output --s3-bucket odins-ravne-data
+scripts/data_upload/upload_to_s3.py --local-path /output --s3-bucket odins-ravne-data
 
 # 5. Analyze results
-hugin analyze /output --species moose
+src/hugin/cli.py analyze /output --species moose
 
 # 6. Generate report
-hugin report /output --format pdf
+src/hugin/cli.py report /output --format pdf
 ```
 
 ### Testing Workflow
 ```bash
 # 1. Run performance tests
-./scripts/testing/performance_test.py --image-count 1000
+scripts/testing/performance_test.py --image-count 1000
 
 # 2. Run integration tests
-./scripts/testing/integration_test.py --test-pipeline
+scripts/testing/integration_test.py --test-pipeline
 
 # 3. Analyze costs
-./scripts/testing/cost_analysis.py --timeframe 30
+scripts/testing/cost_analysis.py --timeframe 30
 
 # 4. Generate test report
-./scripts/testing/generate_test_report.py --output test_report.html
+scripts/testing/generate_test_report.py --output test_report.html
 ```
 
 ---

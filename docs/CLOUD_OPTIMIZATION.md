@@ -249,14 +249,14 @@ aws budgets create-budget \
 ### Deploy Optimized Infrastructure
 ```bash
 # Deploy GPU-optimized infrastructure
-./scripts/infrastructure/deploy_aws_infrastructure.py \
+scripts/infrastructure/deploy_aws_infrastructure.py \
   --gpu-enabled \
   --spot-instances \
   --auto-scaling \
   --cost-optimization
 
 # Deploy monitoring
-./scripts/monitoring/deploy_monitoring.py \
+scripts/monitoring/deploy_monitoring.py \
   --cloudwatch \
   --alerts \
   --dashboards
@@ -265,13 +265,13 @@ aws budgets create-budget \
 ### Performance Testing
 ```bash
 # Run performance tests
-./scripts/testing/performance_test.py \
+scripts/testing/performance_test.py \
   --instance-type g4dn.xlarge \
   --batch-size 32 \
   --image-count 1000
 
 # Run cost analysis
-./scripts/analysis/cost_analysis.py \
+scripts/analysis/cost_analysis.py \
   --timeframe 30 \
   --optimization-suggestions
 ```
