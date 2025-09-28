@@ -1,500 +1,233 @@
-"""
-Optimized Video Processor with GPU acceleration and parallel processing.
-
-This module provides high-performance video processing with:
-- PyAV for efficient frame extraction
-- GPU-accelerated decoding (NVENC/NVDEC)
-- Parallel file processing with multiprocessing
-- Batch GPU decoding for AWS g5/g6 instances
-- Memory-efficient processing with prefetching
-- Model caching and warmup per worker
-"""
-
-import os
-import sys
-import time
-import hashlib
-import pickle
+from __future__ import annotations
+from typing import List, Dict, Any, Optional, Iterator, Tuple
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple, Iterator, Any
+import cv2
+import tempfile
+import os
 from dataclasses import dataclass
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
-import multiprocessing as mp
-from queue import Queue, Empty
-import threading
-import queue
+import numpy as np
 
-try:
-    import av
-    import numpy as np
-    import cv2
-    from PIL import Image
-    from ultralytics import YOLO
-except ImportError as e:
-    print(f"Missing dependencies for optimized video processing: {e}")
-    print("Install with: pip install av opencv-python pillow numpy ultralytics")
-    sys.exit(1)
+from .detector import BaseDetector, Detection
+from .logging_config import get_logger
 
-from ..detector import Detection
-from ..metadata import get_timestamp_from_exif, get_gps_from_exif
-from ..logging_config import get_logger
-
-logger = get_logger("wildlife_pipeline.video_processor_optimized")
-
+# Initialize logger for video processing
+logger = get_logger("wildlife_pipeline.video_processor")
 
 @dataclass
 class VideoFrame:
-    """Optimized video frame data structure."""
+    """Represents a single frame from a video"""
     frame_number: int
-    timestamp: float
-    image: np.ndarray
-    width: int
-    height: int
-    codec: str
-    pixel_format: str
+    timestamp: float  # seconds from start of video
+    image_path: Optional[Path] = None
+    detections: List[Detection] = None
 
-
-@dataclass
-class VideoProcessingConfig:
-    """Configuration for optimized video processing."""
-    sample_interval_seconds: float = 0.3
-    max_frames: int = 1000
-    batch_size: int = 32
-    use_gpu_decoding: bool = True
-    gpu_device_id: int = 0
-    parallel_workers: int = None
-    memory_limit_gb: int = 8
-    output_format: str = "RGB"
-    quality_preset: str = "fast"
-    model_cache_dir: Optional[str] = None
-    prefetch_batches: int = 2
-    warmup_iterations: int = 3
-
-
-class ModelCache:
-    """Model caching and warmup for multiprocessing workers."""
+class VideoProcessor:
+    """
+    Process videos for wildlife detection by extracting frames and analyzing them.
+    """
     
-    def __init__(self, cache_dir: Optional[str] = None):
-        self.cache_dir = Path(cache_dir) if cache_dir else Path.home() / ".wildlife_cache" / "models"
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self._models = {}
-        self.logger = get_logger("wildlife_pipeline.model_cache")
-    
-    def get_model(self, model_path: str, device: str = "cuda") -> YOLO:
-        """Get cached model or load and cache it."""
-        cache_key = f"{model_path}_{device}"
-        
-        if cache_key not in self._models:
-            self.logger.info(f"🔄 Loading model: {model_path}")
-            model = YOLO(model_path)
-            model.to(device)
-            
-            # Warmup model
-            self._warmup_model(model)
-            
-            self._models[cache_key] = model
-            self.logger.info(f"✅ Model cached: {cache_key}")
-        
-        return self._models[cache_key]
-    
-    def _warmup_model(self, model: YOLO, iterations: int = 3) -> None:
-        """Warmup model with dummy data."""
-        dummy_image = np.random.randint(0, 255, (640, 640, 3), dtype=np.uint8)
-        
-        for i in range(iterations):
-            try:
-                _ = model.predict(dummy_image, verbose=False)
-            except Exception as e:
-                self.logger.warning(f"⚠️  Warmup iteration {i} failed: {e}")
-        
-        self.logger.info(f"🔥 Model warmup completed ({iterations} iterations)")
-
-
-class BatchPrefetcher:
-    """Prefetch batches for efficient processing."""
-    
-    def __init__(self, batch_size: int, prefetch_batches: int = 2):
-        self.batch_size = batch_size
-        self.prefetch_batches = prefetch_batches
-        self.queue = queue.Queue(maxsize=prefetch_batches)
-        self.stop_event = threading.Event()
-        self.thread = None
-        self.logger = get_logger("wildlife_pipeline.batch_prefetcher")
-    
-    def start_prefetching(self, data_source: Iterator, processor_func):
-        """Start prefetching batches in background thread."""
-        self.thread = threading.Thread(
-            target=self._prefetch_worker,
-            args=(data_source, processor_func),
-            daemon=True
-        )
-        self.thread.start()
-        self.logger.info(f"🚀 Started prefetching {self.prefetch_batches} batches")
-    
-    def _prefetch_worker(self, data_source: Iterator, processor_func):
-        """Worker thread for prefetching."""
-        batch = []
-        
-        for item in data_source:
-            if self.stop_event.is_set():
-                break
-                
-            batch.append(item)
-            
-            if len(batch) >= self.batch_size:
-                try:
-                    processed_batch = processor_func(batch)
-                    self.queue.put(processed_batch, timeout=1.0)
-                    batch = []
-                except queue.Full:
-                    self.logger.warning("⚠️  Prefetch queue full, dropping batch")
-                except Exception as e:
-                    self.logger.error(f"❌ Prefetch error: {e}")
-        
-        # Process remaining items
-        if batch:
-            try:
-                processed_batch = processor_func(batch)
-                self.queue.put(processed_batch, timeout=1.0)
-            except Exception as e:
-                self.logger.error(f"❌ Final batch error: {e}")
-    
-    def get_batch(self, timeout: float = 5.0):
-        """Get next prefetched batch."""
-        try:
-            return self.queue.get(timeout=timeout)
-        except queue.Empty:
-            return None
-    
-    def stop(self):
-        """Stop prefetching."""
-        self.stop_event.set()
-        if self.thread:
-            self.thread.join(timeout=2.0)
-
-
-class OptimizedVideoProcessor:
-    """High-performance video processor with GPU acceleration."""
-    
-    def __init__(self, config: VideoProcessingConfig = None):
-        self.config = config or VideoProcessingConfig()
-        self.logger = logger
-        
-        # Set parallel workers based on CPU count
-        if self.config.parallel_workers is None:
-            self.config.parallel_workers = min(mp.cpu_count(), 8)
-        
-        # Initialize GPU decoding if available
-        self.gpu_available = self._check_gpu_support()
-        if self.gpu_available:
-            self.logger.info(f"🚀 GPU decoding enabled (device {self.config.gpu_device_id})")
-        else:
-            self.logger.info("⚠️  GPU decoding not available, using CPU")
-            self.config.use_gpu_decoding = False
-    
-    def _check_gpu_support(self) -> bool:
-        """Check if GPU decoding is available."""
-        try:
-            # Check for CUDA availability
-            if hasattr(cv2, 'cuda'):
-                return cv2.cuda.getCudaEnabledDeviceCount() > 0
-            return False
-        except Exception:
-            return False
-    
-    def process_video_optimized(self, video_path: Path, 
-                              detector=None, 
-                              output_dir: Optional[Path] = None) -> Dict:
+    def __init__(self, detector: BaseDetector, frame_interval: int = None, 
+                 max_frames: int = 100, temp_dir: Optional[Path] = None, 
+                 sample_interval_seconds: float = 0.3):
         """
-        Optimized video processing with GPU acceleration and parallel processing.
+        Initialize video processor.
+        
+        Args:
+            detector: Wildlife detector to use for frame analysis
+            frame_interval: Extract every Nth frame (deprecated, use sample_interval_seconds)
+            max_frames: Maximum number of frames to extract per video
+            temp_dir: Directory to store temporary frame images
+            sample_interval_seconds: Extract frames every N seconds (default: 0.3 seconds = ~3.33 FPS)
+        """
+        self.detector = detector
+        self.sample_interval_seconds = sample_interval_seconds
+        self.max_frames = max_frames
+        self.temp_dir = temp_dir or Path(tempfile.gettempdir()) / "wildlife_video_frames"
+        self.temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Backward compatibility
+        if frame_interval is not None:
+            self.frame_interval = frame_interval
+        else:
+            self.frame_interval = None
+    
+    def process_video(self, video_path: Path) -> List[VideoFrame]:
+        """
+        Process a video file and extract frames for wildlife detection.
         
         Args:
             video_path: Path to video file
-            detector: Detection model (optional)
-            output_dir: Directory to save extracted frames (optional)
             
         Returns:
-            Dictionary with processing results
+            List of VideoFrame objects with detections
         """
-        start_time = time.time()
-        self.logger.info(f"🎬 Processing video: {video_path.name}")
+        logger.log_stage_start("video_processing", video_path=str(video_path))
+        
+        if not video_path.exists():
+            logger.error(f"Video file not found: {video_path}")
+            raise FileNotFoundError(f"Video file not found: {video_path}")
+        
+        # Open video file
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            logger.error(f"Could not open video file: {video_path}")
+            raise ValueError(f"Could not open video file: {video_path}")
         
         try:
-            # Open video with PyAV for efficient decoding
-            container = av.open(str(video_path))
-            video_stream = container.streams.video[0]
+            # Get video properties
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            duration = total_frames / fps if fps > 0 else 0
             
-            # Get video metadata
-            duration = float(video_stream.duration * video_stream.time_base)
-            fps = float(video_stream.rate)
-            total_frames = int(duration * fps)
+            logger.info(f"🎥 Processing video: {video_path.name}", 
+                       video_name=video_path.name, duration_seconds=duration, 
+                       fps=fps, total_frames=total_frames, 
+                       sample_interval=self.sample_interval_seconds)
             
-            self.logger.info(f"📊 Video info: {duration:.1f}s, {fps:.1f} fps, {total_frames} frames")
+            frames = []
+            frame_count = 0
+            extracted_count = 0
+            last_extracted_time = -self.sample_interval_seconds  # Allow first frame
             
-            # Calculate frame sampling
-            frame_interval = int(fps * self.config.sample_interval_seconds)
-            target_frames = min(total_frames // frame_interval, self.config.max_frames)
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                current_time = frame_count / fps if fps > 0 else 0
+                
+                # Extract frame at specified time interval
+                should_extract = (
+                    (self.frame_interval is not None and frame_count % self.frame_interval == 0) or
+                    (self.frame_interval is None and current_time - last_extracted_time >= self.sample_interval_seconds)
+                ) and extracted_count < self.max_frames
+                
+                if should_extract:
+                    timestamp = frame_count / fps if fps > 0 else 0
+                    
+                    # Save frame as temporary image
+                    frame_filename = f"{video_path.stem}_frame_{frame_count:06d}.jpg"
+                    frame_path = self.temp_dir / frame_filename
+                    
+                    cv2.imwrite(str(frame_path), frame)
+                    
+                    # Analyze frame for wildlife
+                    detections = self.detector.predict(frame_path)
+                    
+                    # Create VideoFrame object
+                    video_frame = VideoFrame(
+                        frame_number=frame_count,
+                        timestamp=timestamp,
+                        image_path=frame_path,
+                        detections=detections
+                    )
+                    
+                    frames.append(video_frame)
+                    extracted_count += 1
+                    last_extracted_time = current_time
+                    
+                    # Log progress
+                    if extracted_count % 10 == 0:
+                        logger.log_processing_progress(extracted_count, self.max_frames, "frames")
+                
+                frame_count += 1
             
-            self.logger.info(f"🎯 Target frames: {target_frames} (interval: {frame_interval})")
-            
-            # Process frames with GPU acceleration
-            frames = self._extract_frames_gpu_optimized(
-                container, video_stream, frame_interval, target_frames
+            # Log video processing results
+            detections_found = sum(len(frame.detections) for frame in frames)
+            logger.log_video_processing(
+                video_path=str(video_path),
+                frames_extracted=len(frames),
+                detections_found=detections_found,
+                duration_seconds=duration
             )
             
-            # Process detections if detector provided
-            detections = []
-            if detector:
-                detections = self._process_frames_batch(frames, detector)
+            logger.log_stage_complete("video_processing", 
+                                    frames_extracted=len(frames), 
+                                    detections_found=detections_found)
+            return frames
             
-            # Save frames if output directory specified
-            if output_dir:
-                self._save_frames_parallel(frames, output_dir, video_path.stem)
-            
-            processing_time = time.time() - start_time
-            fps_processed = len(frames) / processing_time if processing_time > 0 else 0
-            
-            result = {
-                'video_path': str(video_path),
-                'duration': duration,
-                'fps': fps,
-                'total_frames': total_frames,
-                'frames_extracted': len(frames),
-                'detections': detections,
-                'processing_time': processing_time,
-                'fps_processed': fps_processed,
-                'gpu_accelerated': self.gpu_available
-            }
-            
-            self.logger.info(f"✅ Video processing completed: {len(frames)} frames in {processing_time:.1f}s ({fps_processed:.1f} fps)")
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error processing video {video_path}: {e}")
-            raise
         finally:
-            if 'container' in locals():
-                container.close()
+            cap.release()
     
-    def _extract_frames_gpu_optimized(self, container, video_stream, 
-                                     frame_interval: int, target_frames: int) -> List[VideoFrame]:
-        """Extract frames with GPU-accelerated decoding."""
-        frames = []
-        frame_count = 0
-        extracted_count = 0
-        
-        # Configure decoder for GPU if available
-        if self.config.use_gpu_decoding and self.gpu_available:
-            try:
-                # Use hardware decoder if available
-                video_stream.codec_context.options = {
-                    'hwaccel': 'cuda',
-                    'hwaccel_device': str(self.config.gpu_device_id)
-                }
-            except Exception as e:
-                self.logger.warning(f"⚠️  GPU decoder setup failed: {e}")
-                self.config.use_gpu_decoding = False
-        
-        # Extract frames in batches for efficiency
-        batch_frames = []
-        batch_size = self.config.batch_size
-        
-        for frame in container.decode(video_stream):
-            if extracted_count >= target_frames:
-                break
-                
-            if frame_count % frame_interval == 0:
-                # Convert frame to numpy array
-                img_array = frame.to_ndarray(format='rgb24')
-                
-                # Create VideoFrame object
-                video_frame = VideoFrame(
-                    frame_number=frame_count,
-                    timestamp=float(frame.pts * frame.time_base),
-                    image=img_array,
-                    width=frame.width,
-                    height=frame.height,
-                    codec=video_stream.codec.name,
-                    pixel_format=frame.format.name
-                )
-                
-                batch_frames.append(video_frame)
-                
-                # Process batch when full
-                if len(batch_frames) >= batch_size:
-                    frames.extend(batch_frames)
-                    batch_frames = []
-                    extracted_count += batch_size
-                
-                extracted_count += 1
-            
-            frame_count += 1
-        
-        # Add remaining frames
-        if batch_frames:
-            frames.extend(batch_frames)
-        
-        return frames
-    
-    def _process_frames_batch(self, frames: List[VideoFrame], detector) -> List[Detection]:
-        """Process frames in batches for efficient inference."""
-        detections = []
-        batch_size = self.config.batch_size
-        
-        self.logger.info(f"🔍 Processing {len(frames)} frames with detector")
-        
-        # Process frames in batches
-        for i in range(0, len(frames), batch_size):
-            batch = frames[i:i + batch_size]
-            
-            # Convert frames to PIL Images for detector
-            images = []
-            for frame in batch:
-                pil_image = Image.fromarray(frame.image)
-                images.append(pil_image)
-            
-            # Batch inference if detector supports it
-            if hasattr(detector, 'predict_batch'):
-                batch_detections = detector.predict_batch(images)
-                detections.extend(batch_detections)
-            else:
-                # Individual inference
-                for j, image in enumerate(images):
-                    frame_detections = detector.predict(image)
-                    detections.extend(frame_detections)
-        
-        return detections
-    
-    def _save_frames_parallel(self, frames: List[VideoFrame], 
-                            output_dir: Path, video_name: str) -> None:
-        """Save frames in parallel for better I/O performance."""
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        def save_frame(frame_data):
-            frame, frame_idx = frame_data
-            filename = f"{video_name}_frame_{frame_idx:06d}.jpg"
-            filepath = output_dir / filename
-            
-            # Convert to PIL and save
-            pil_image = Image.fromarray(frame.image)
-            pil_image.save(filepath, quality=95, optimize=True)
-            return filepath
-        
-        # Use ThreadPoolExecutor for I/O bound operations
-        with ThreadPoolExecutor(max_workers=self.config.parallel_workers) as executor:
-            frame_data = [(frame, i) for i, frame in enumerate(frames)]
-            saved_files = list(executor.map(save_frame, frame_data))
-        
-        self.logger.info(f"💾 Saved {len(saved_files)} frames to {output_dir}")
-    
-    def process_multiple_videos(self, video_paths: List[Path], 
-                               detector=None, 
-                               output_base_dir: Optional[Path] = None) -> Dict:
+    def summarize_video_detections(self, video_frames: List[VideoFrame]) -> Dict[str, Any]:
         """
-        Process multiple videos in parallel.
+        Summarize detections across all frames in a video.
         
         Args:
-            video_paths: List of video file paths
-            detector: Detection model (optional)
-            output_base_dir: Base directory for outputs (optional)
+            video_frames: List of VideoFrame objects from video processing
             
         Returns:
-            Dictionary with processing results for all videos
+            Summary dictionary with detection statistics
         """
-        self.logger.info(f"🎬 Processing {len(video_paths)} videos in parallel")
-        
-        def process_single_video(video_path):
-            output_dir = None
-            if output_base_dir:
-                output_dir = output_base_dir / video_path.stem
-            
-            return self.process_video_optimized(video_path, detector, output_dir)
-        
-        # Use ProcessPoolExecutor for CPU-intensive tasks
-        results = {}
-        with ProcessPoolExecutor(max_workers=self.config.parallel_workers) as executor:
-            future_to_path = {
-                executor.submit(process_single_video, path): path 
-                for path in video_paths
+        if not video_frames:
+            return {
+                "total_frames": 0,
+                "frames_with_detections": 0,
+                "total_detections": 0,
+                "species_detected": {},
+                "detection_timeline": []
             }
-            
-            for future in future_to_path:
-                video_path = future_to_path[future]
+        
+        # Collect all detections
+        all_detections = []
+        frames_with_detections = 0
+        species_count = {}
+        
+        for frame in video_frames:
+            if frame.detections:
+                frames_with_detections += 1
+                all_detections.extend(frame.detections)
+                
+                # Count species
+                for det in frame.detections:
+                    species = det.label
+                    species_count[species] = species_count.get(species, 0) + 1
+        
+        # Create detection timeline
+        timeline = []
+        for frame in video_frames:
+            if frame.detections:
+                for det in frame.detections:
+                    timeline.append({
+                        "timestamp": frame.timestamp,
+                        "frame": frame.frame_number,
+                        "species": det.label,
+                        "confidence": det.confidence
+                    })
+        
+        return {
+            "total_frames": len(video_frames),
+            "frames_with_detections": frames_with_detections,
+            "total_detections": len(all_detections),
+            "species_detected": species_count,
+            "detection_timeline": timeline,
+            "detection_rate": frames_with_detections / len(video_frames) if video_frames else 0
+        }
+    
+    def cleanup_temp_files(self):
+        """Clean up temporary frame images"""
+        if self.temp_dir.exists():
+            for file in self.temp_dir.glob("*.jpg"):
                 try:
-                    result = future.result()
-                    results[str(video_path)] = result
+                    file.unlink()
                 except Exception as e:
-                    self.logger.error(f"❌ Error processing {video_path}: {e}")
-                    results[str(video_path)] = {'error': str(e)}
-        
-        return results
-    
-    def get_video_info(self, video_path: Path) -> Dict:
-        """Get detailed video information."""
-        try:
-            container = av.open(str(video_path))
-            video_stream = container.streams.video[0]
-            
-            info = {
-                'path': str(video_path),
-                'duration': float(video_stream.duration * video_stream.time_base),
-                'fps': float(video_stream.rate),
-                'width': video_stream.width,
-                'height': video_stream.height,
-                'codec': video_stream.codec.name,
-                'bitrate': video_stream.bit_rate,
-                'total_frames': int(video_stream.duration * video_stream.rate),
-                'file_size': video_path.stat().st_size,
-                'gpu_decoding_supported': self.gpu_available
-            }
-            
-            container.close()
-            return info
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error getting video info for {video_path}: {e}")
-            return {'error': str(e)}
+                    print(f"Warning: Could not delete {file}: {e}")
 
-
-def main():
-    """Test the optimized video processor."""
-    import argparse
+def iter_videos(input_root: Path, video_exts: List[str] = None) -> Iterator[Path]:
+    """
+    Iterate through video files in the input directory.
     
-    parser = argparse.ArgumentParser(description="Optimized Video Processor")
-    parser.add_argument("video_path", help="Path to video file")
-    parser.add_argument("--output", help="Output directory for frames")
-    parser.add_argument("--interval", type=float, default=0.3, help="Frame sampling interval (seconds)")
-    parser.add_argument("--max-frames", type=int, default=1000, help="Maximum frames to extract")
-    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for processing")
-    parser.add_argument("--gpu", action="store_true", help="Enable GPU decoding")
-    parser.add_argument("--workers", type=int, help="Number of parallel workers")
+    Args:
+        input_root: Root directory to search
+        video_exts: List of video file extensions (default: common video formats)
     
-    args = parser.parse_args()
+    Yields:
+        Path to video files
+    """
+    if video_exts is None:
+        video_exts = [".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".m4v"]
     
-    # Create configuration
-    config = VideoProcessingConfig(
-        sample_interval_seconds=args.interval,
-        max_frames=args.max_frames,
-        batch_size=args.batch_size,
-        use_gpu_decoding=args.gpu,
-        parallel_workers=args.workers
-    )
-    
-    # Create processor
-    processor = OptimizedVideoProcessor(config)
-    
-    # Process video
-    video_path = Path(args.video_path)
-    output_dir = Path(args.output) if args.output else None
-    
-    result = processor.process_video_optimized(video_path, output_dir=output_dir)
-    
-    print(f"\n📊 Processing Results:")
-    print(f"  Frames extracted: {result['frames_extracted']}")
-    print(f"  Processing time: {result['processing_time']:.2f}s")
-    print(f"  FPS processed: {result['fps_processed']:.2f}")
-    print(f"  GPU accelerated: {result['gpu_accelerated']}")
-
-
-if __name__ == "__main__":
-    main()
+    root = Path(input_root)
+    for p in root.rglob("*"):
+        if p.is_file() and p.suffix.lower() in video_exts:
+            yield p
