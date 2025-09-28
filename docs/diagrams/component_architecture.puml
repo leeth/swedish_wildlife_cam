@@ -1,0 +1,51 @@
+@startuml Component Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam component {
+    BackgroundColor #E1F5FE
+    BorderColor #1976D2
+    FontColor #000000
+}
+skinparam package {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #000000
+}
+
+package "Odin (All-Father)" {
+    [Infrastructure Management] as Infra
+    [Pipeline Orchestration] as Pipeline
+    [Cost Optimization] as Cost
+    [Resource Management] as Resource
+}
+
+package "Munin (Memory Keeper)" {
+    [Video Processing] as Video
+    [Object Detection] as Detection
+    [Metadata Processing] as Metadata
+    [Data Ingestion] as Ingestion
+}
+
+package "Hugin (Thought Bringer)" {
+    [Species Detection] as Species
+    [GPS Clustering] as GPS
+    [Data Condensation] as Condensation
+    [Cluster Enrichment] as Enrichment
+}
+
+package "Infrastructure" {
+    [AWS Services] as AWS
+    [Local Services] as Local
+    [Docker Containers] as Docker
+}
+
+Infra --> Video
+Pipeline --> Detection
+Cost --> Species
+Resource --> GPS
+
+Video --> AWS
+Detection --> Local
+Species --> Docker
+GPS --> AWS
+@enduml

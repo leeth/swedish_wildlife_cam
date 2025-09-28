@@ -1,0 +1,45 @@
+@startuml Performance Monitoring
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam component {
+    BackgroundColor #E1F5FE
+    BorderColor #1976D2
+    FontColor #000000
+}
+skinparam package {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #000000
+}
+
+package "Monitoring" {
+    [CloudWatch] as CW
+    [Cost Monitoring] as Cost
+    [Performance Metrics] as Perf
+    [Resource Usage] as Resource
+}
+
+package "Alerts" {
+    [Cost Alerts] as CostAlert
+    [Performance Alerts] as PerfAlert
+    [Resource Alerts] as ResourceAlert
+}
+
+package "Reporting" {
+    [Cost Reports] as CostReport
+    [Performance Reports] as PerfReport
+    [Resource Reports] as ResourceReport
+}
+
+CW --> Cost
+CW --> Perf
+CW --> Resource
+
+Cost --> CostAlert
+Perf --> PerfAlert
+Resource --> ResourceAlert
+
+CostAlert --> CostReport
+PerfAlert --> PerfReport
+ResourceAlert --> ResourceReport
+@enduml

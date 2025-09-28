@@ -1,0 +1,34 @@
+@startuml Hugin Workflow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+    FontColor #000000
+}
+skinparam activityDiamond {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #000000
+}
+
+start
+:Munin Results;
+:Stage 2.1: Human/Animal Detection;
+if (Is Animal?) then (Yes)
+    :Stage 2.2: Species Detection;
+    :Species Classification;
+    :Stage 2.3: GPS Clustering;
+    :Location Clustering 5m radius;
+    :Data Condensation;
+    :Time Windows 10min;
+    :Stage 2.4: Cluster Enrichment;
+    :User Labeling;
+    :Cluster Names;
+    :Final Reports;
+    stop
+else (No)
+    :Human - Skip;
+    stop
+endif
+@enduml

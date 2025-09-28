@@ -1,0 +1,31 @@
+@startuml Deployment Pipeline
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+    BackgroundColor #E1F5FE
+    BorderColor #1976D2
+    FontColor #000000
+}
+skinparam activityDiamond {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #000000
+}
+
+start
+:Code Commit;
+:Build Docker Images;
+:Push to ECR;
+:Deploy Infrastructure;
+:Run Tests;
+if (Tests Pass?) then (Yes)
+    :Deploy to Production;
+    :Monitor Performance;
+    :Generate Reports;
+    stop
+else (No)
+    :Rollback;
+    :Fix Issues;
+    stop
+endif
+@enduml

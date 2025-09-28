@@ -1,0 +1,37 @@
+@startuml User Labeling
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+    FontColor #000000
+}
+skinparam activityDiamond {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #000000
+}
+
+start
+:Unknown Clusters;
+:Request Labels;
+:YAML Template;
+:User Edits;
+:Submit Labels;
+:Cluster Names;
+:Enriched Reports;
+
+note right
+    Overlap Detection
+    ↓
+    Merge Requests
+    ↓
+    User Approval
+    ↓
+    Merged Clusters
+    ↓
+    New Names
+    ↓
+    Cluster Names
+end note
+@enduml

@@ -2,6 +2,24 @@
 
 Dette dokument indeholder det komplette workflow diagram for Odins Ravne systemet.
 
+## 🎨 PlantUML Diagrams
+
+Alle diagrammer er også tilgængelige som PlantUML filer i `docs/diagrams/` directory:
+
+- **PlantUML Documentation**: [PLANTUML_DIAGRAMS.md](PLANTUML_DIAGRAMS.md)
+- **Individual Diagrams**: [docs/diagrams/](diagrams/)
+- **Generate Scripts**: [docs/diagrams/generate_diagrams.sh](diagrams/generate_diagrams.sh)
+
+### Quick Start with PlantUML
+```bash
+# Generate all diagrams
+cd docs/diagrams
+./generate_diagrams.sh
+
+# Generate single diagram
+./generate_single.sh system_workflow png
+```
+
 ## System Overview
 
 ```mermaid

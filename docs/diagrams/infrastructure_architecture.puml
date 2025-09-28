@@ -1,0 +1,49 @@
+@startuml Infrastructure Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam component {
+    BackgroundColor #E1F5FE
+    BorderColor #1976D2
+    FontColor #000000
+}
+skinparam package {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #000000
+}
+
+package "AWS Cloud" {
+    [AWS S3] as S3
+    [AWS Batch] as Batch
+    [AWS ECR] as ECR
+    [CloudFormation] as CF
+    [AWS IAM] as IAM
+}
+
+package "Local Development" {
+    [Docker Compose] as DC
+    [LocalStack] as LS
+    [MinIO] as MinIO
+    [Redis] as Redis
+    [PostgreSQL] as PG
+}
+
+package "Processing Components" {
+    [Odin CLI] as Odin
+    [Munin Processing] as Munin
+    [Hugin Analysis] as Hugin
+}
+
+S3 --> Batch
+Batch --> ECR
+ECR --> CF
+CF --> IAM
+
+DC --> LS
+LS --> MinIO
+MinIO --> Redis
+Redis --> PG
+
+Odin --> Munin
+Munin --> Hugin
+@enduml

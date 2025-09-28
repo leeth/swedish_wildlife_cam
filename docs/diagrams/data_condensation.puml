@@ -1,0 +1,30 @@
+@startuml Data Condensation
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+    FontColor #000000
+}
+skinparam activityDiamond {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #000000
+}
+
+start
+:Observations;
+:Time Window Grouping;
+:10 Minute Windows;
+:Species Counting;
+:Activity Patterns;
+:Condensed Data;
+fork
+    :CSV Export;
+fork again
+    :JSON Export;
+fork again
+    :Analytics Reports;
+end fork
+stop
+@enduml

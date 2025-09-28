@@ -1,0 +1,38 @@
+@startuml System Workflow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+    BackgroundColor #E1F5FE
+    BorderColor #1976D2
+    FontColor #000000
+}
+skinparam activityDiamond {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #000000
+}
+
+start
+:Wildlife Camera Images;
+:Munin Stage 0: Video Processing;
+:Munin Stage 1: Object Detection;
+if (Positive Observations?) then (Yes)
+    :Hugin Stage 2.1: Human/Animal Detection;
+    :Hugin Stage 2.2: Species Detection;
+    :Hugin Stage 2.3: GPS Clustering;
+    :Hugin Stage 2.4: Cluster Enrichment;
+    :Final Reports with Cluster Names;
+    stop
+else (No)
+    :End: No Wildlife;
+    stop
+endif
+
+note right
+    User Labeling
+    ↓
+    Cluster Names
+    ↓
+    Cluster Enrichment
+end note
+@enduml

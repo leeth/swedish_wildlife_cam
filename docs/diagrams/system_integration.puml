@@ -1,0 +1,35 @@
+@startuml System Integration
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam component {
+    BackgroundColor #E1F5FE
+    BorderColor #1976D2
+    FontColor #000000
+}
+skinparam package {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #000000
+}
+
+package "Odin Infrastructure" {
+    [Odin Infrastructure] --> [Munin Processing]
+    [Munin Processing] --> [Hugin Analysis]
+    [Hugin Analysis] --> [Final Reports]
+}
+
+package "Local Development" {
+    [Local Development] --> [Docker Compose]
+    [Docker Compose] --> [LocalStack]
+    [LocalStack] --> [MinIO]
+    [MinIO] --> [Redis]
+    [Redis] --> [PostgreSQL]
+}
+
+package "Cloud Deployment" {
+    [Cloud Deployment] --> [AWS S3]
+    [AWS S3] --> [AWS Batch]
+    [AWS Batch] --> [AWS ECR]
+    [AWS ECR] --> [CloudFormation]
+}
+@enduml

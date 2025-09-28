@@ -1,0 +1,47 @@
+@startuml Data Flow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam component {
+    BackgroundColor #E1F5FE
+    BorderColor #1976D2
+    FontColor #000000
+}
+skinparam package {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #000000
+}
+
+package "Input" {
+    [Wildlife Camera Images] as Input
+    [Video Files] as Video
+    [Image Files] as Images
+}
+
+package "Processing" {
+    [Munin Stage 0] as M0
+    [Munin Stage 1] as M1
+    [Hugin Stage 2.1] as H1
+    [Hugin Stage 2.2] as H2
+    [Hugin Stage 2.3] as H3
+    [Hugin Stage 2.4] as H4
+}
+
+package "Output" {
+    [Final Reports] as Output
+    [Cluster Names] as Clusters
+    [Analytics] as Analytics
+}
+
+Input --> M0
+Video --> M0
+Images --> M0
+M0 --> M1
+M1 --> H1
+H1 --> H2
+H2 --> H3
+H3 --> H4
+H4 --> Output
+H4 --> Clusters
+H4 --> Analytics
+@enduml

@@ -329,6 +329,9 @@ Se [ROADMAP.md](docs/ROADMAP.md) for detaljeret udviklingsplan.
 - **Infrastruktur**: [INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md)
 - **Cost Optimering**: [COST_OPTIMIZATION.md](docs/COST_OPTIMIZATION.md)
 - **Utilities & Tools**: [UTILITIES.md](docs/UTILITIES.md)
+- **Workflow Diagrams**: [WORKFLOW_DIAGRAM.md](docs/WORKFLOW_DIAGRAM.md)
+- **PlantUML Diagrams**: [PLANTUML_DIAGRAMS.md](docs/PLANTUML_DIAGRAMS.md)
+- **Diagram Overview**: [DIAGRAM_OVERVIEW.md](docs/DIAGRAM_OVERVIEW.md)
 
 ## 🤝 Bidrag
 

@@ -1,0 +1,31 @@
+@startuml Munin Workflow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam activity {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #000000
+}
+skinparam activityDiamond {
+    BackgroundColor #C8E6C9
+    BorderColor #388E3C
+    FontColor #000000
+}
+
+start
+:Camera Images/Video;
+:Stage 0: Video Processing;
+:Frame Extraction;
+:EXIF Metadata Processing;
+:Stage 1: Object Detection;
+:Swedish Wildlife Detector;
+if (Wildlife Detected?) then (Yes)
+    :Positive Observations;
+    :Munin Complete;
+    :Pass to Hugin;
+    stop
+else (No)
+    :No Wildlife - End;
+    stop
+endif
+@enduml
