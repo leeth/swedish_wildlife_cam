@@ -13,6 +13,7 @@ from .detector import YOLODetector, BaseDetector, Detection
 from .wildlife_detector import WildlifeDetector
 from .megadetector import SwedishWildlifeDetector
 from .utils import to_json
+from .stages import StageOneFalsePositiveFilter, StageTwoHumanAnimalAndSpecies
 
 def build_detector(cfg: PipelineConfig) -> BaseDetector:
     if not cfg.model_path:
@@ -32,16 +33,28 @@ def row_from_detections(
     ts,
     detections: List[Detection],
 ) -> Dict[str, Any]:
-    observation_any = len(detections) > 0
+    # Stage 1: Filter false positives
+    stage1 = StageOneFalsePositiveFilter(min_confidence=0.25)
+    s1 = stage1.run(detections)
+
+    # Stage 2: Human/animal split and species mapping on true positives
+    stage2 = StageTwoHumanAnimalAndSpecies()
+    s2 = stage2.run(s1.true_positives)
+
+    observation_any = len(s1.true_positives) > 0
     top_label: Optional[str] = None
     top_conf: Optional[float] = None
     if observation_any:
-        top = max(detections, key=lambda d: d.confidence)
+        top = max(s1.true_positives, key=lambda d: d.confidence)
         top_label, top_conf = top.label, top.confidence
 
     obs_payload = [
         {"label": d.label, "confidence": d.confidence, "bbox": d.bbox}
-        for d in detections
+        for d in s1.true_positives
+    ]
+    false_pos_payload = [
+        {"label": d.label, "confidence": d.confidence, "bbox": d.bbox}
+        for d in s1.false_positives
     ]
 
     return {
@@ -50,6 +63,10 @@ def row_from_detections(
         "timestamp": ts.isoformat(),
         "observation_any": observation_any,
         "observations": to_json(obs_payload),
+        "false_positives": to_json(false_pos_payload),
+        "num_humans": len(s2.humans),
+        "num_animals": len(s2.animals),
+        "species_counts": to_json(s2.species_counts),
         "top_label": top_label,
         "top_confidence": top_conf,
     }
