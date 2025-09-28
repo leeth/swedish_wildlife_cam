@@ -1,27 +1,27 @@
 # 🐦‍⬛ Odins Ravne Roadmap
 
-**Project:** Odins Ravne - Swedish Wildlife Intelligence System  
+**Projekt:** Odins Ravne - Swedish Wildlife Intelligence System  
 **Version:** 1.0  
-**Last Updated:** 2025-09-28
+**Sidst Opdateret:** 2025-09-28
 
 ## 🎯 Vision
 
 **Munin** (Memory Keeper) samler og bevarer vildtdata fra kameraer, mens **Hugin** (Thought Bringer) giver dyb indsigt og forståelse af dyrelivet.
 
-## 📊 Current Status
+## 📊 Nuværende Status
 
-### ✅ **Munin (Memory Keeper) - COMPLETED**
-- Core data ingestion pipeline (Stage 0-2)
-- Swedish wildlife detection optimization
-- Cloud-optional architecture
-- AWS infrastructure setup
-- Security implementation
-- Comprehensive testing
+### ✅ **Munin (Memory Keeper) - FÆRDIG**
+- Core data indtagelse pipeline (Stage 0-2)
+- Svensk vildt detektion optimering
+- Cloud-optional arkitektur
+- AWS infrastruktur setup
+- Sikkerhed implementering
+- Omfattende testning
 
-### 🚧 **Hugin (Thought Bringer) - IN PROGRESS**
-- Analytics framework foundation
-- Data models and validation
-- Basic reporting capabilities
+### 🚧 **Hugin (Thought Bringer) - I GANG**
+- Analyse framework fundament
+- Data modeller og validering
+- Grundlæggende rapporterings funktioner
 
 ## 🗺️ Development Phases
 

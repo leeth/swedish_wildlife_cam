@@ -2,31 +2,31 @@
 
 **Munin** (Memory Keeper) samler og bevarer vildtdata fra kameraer, mens **Hugin** (Thought Bringer) giver dyb indsigt og forståelse af dyrelivet.
 
-## 🎯 Project Overview
+## 🎯 Projekt Oversigt
 
 Odins Ravne er et omfattende system til svensk vildtmonitorering der kombinerer:
-- **Munin**: Data ingestion, processing og storage (Stage 0-2)
-- **Hugin**: Analytics, insights og visualization (Stage 2+)
+- **Munin**: Data indtagelse, procesering og lagring (Stage 0-2)
+- **Hugin**: Analyse, indsigt og visualisering (Stage 2+)
 
-## 🚀 Quick Start
+## 🚀 Hurtig Start
 
-### Prerequisites
+### Forudsætninger
 ```bash
 # Python 3.9+
 pip install -r requirements.txt
 
-# For GPU support (optional)
+# For GPU support (valgfrit)
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 ```
 
-### Local Development
+### Lokal Udvikling
 ```bash
-# Munin - Data Ingestion
+# Munin - Data Indtagelse
 cd munin/
 pip install -e .
 munin ingest /path/to/images /path/to/output
 
-# Hugin - Analytics
+# Hugin - Analyse
 cd hugin/
 pip install -e .
 hugin analyze /path/to/data
@@ -42,72 +42,72 @@ hugin analyze /path/to/data
 aws batch submit-job --job-definition wildlife-pipeline
 ```
 
-## 📁 Project Structure
+## 📁 Projekt Struktur
 
 ```
-├── munin/                    # Memory Keeper (Data Ingestion)
-│   ├── src/munin/           # Core Munin modules
+├── munin/                    # Memory Keeper (Data Indtagelse)
+│   ├── src/munin/           # Core Munin moduler
 │   ├── pyproject.toml      # Munin dependencies
-│   └── README.md           # Munin documentation
-├── hugin/                   # Thought Bringer (Analytics)
-│   ├── src/hugin/          # Core Hugin modules
+│   └── README.md           # Munin dokumentation
+├── hugin/                   # Thought Bringer (Analyse)
+│   ├── src/hugin/          # Core Hugin moduler
 │   ├── pyproject.toml      # Hugin dependencies
-│   └── README.md           # Hugin documentation
+│   └── README.md           # Hugin dokumentation
 ├── scripts/                 # Utility scripts
 │   ├── infrastructure/     # AWS/cloud setup
-│   ├── image_tools/        # Image processing utilities
+│   ├── image_tools/        # Billedbehandling utilities
 │   └── data_upload/        # Cloud data management
-└── docs/                   # Documentation
-    ├── ROADMAP.md          # Development roadmap
-    ├── INFRASTRUCTURE.md   # Setup and deployment
-    ├── CLOUD_OPTIMIZATION.md # AWS/cloud optimization
-    └── UTILITIES.md        # Tools and utilities
+└── docs/                   # Dokumentation
+    ├── ROADMAP.md          # Udviklings roadmap
+    ├── INFRASTRUCTURE.md   # Setup og deployment
+    ├── CLOUD_OPTIMIZATION.md # AWS/cloud optimering
+    └── UTILITIES.md        # Tools og utilities
 ```
 
 ## 🐦‍⬛ Munin (Memory Keeper)
 
-**Purpose**: Data ingestion, processing, and storage
+**Formål**: Data indtagelse, procesering og lagring
 
-**Key Features**:
-- Swedish wildlife detection (moose, boar, roedeer, fox, badger)
-- Video frame extraction and analysis
-- EXIF metadata processing
-- GPS location classification
-- Cloud-optional architecture
+**Nøglefunktioner**:
+- Svensk vildt detektion (elg, vildsvin, rådyr, ræv, grævling)
+- Video frame ekstraktion og analyse
+- EXIF metadata procesering
+- GPS lokationsklassifikation
+- Cloud-optional arkitektur
 
-### 🎥 Video Processing
-- **Frame Extraction**: Extract frames from MP4, AVI, MOV, MKV videos
-- **Sampling Rate**: Configurable frame sampling (default: 0.3 seconds)
-- **Batch Processing**: Parallel video processing with multiprocessing
-- **GPU Acceleration**: CUDA-accelerated video decoding
+### 🎥 Video Procesering
+- **Frame Ekstraktion**: Ekstraher frames fra MP4, AVI, MOV, MKV videoer
+- **Sampling Rate**: Konfigurerbar frame sampling (standard: 0.3 sekunder)
+- **Batch Procesering**: Parallel video procesering med multiprocessing
+- **GPU Acceleration**: CUDA-accelereret video dekodning
 - **Format Support**: MP4, AVI, MOV, MKV, WebM, FLV, WMV
 
-### 🦌 Wildlife Detection Models
+### 🦌 Vildt Detektion Modeller
 
 #### **Swedish Wildlife Detector**
-- **Optimized for Swedish species**: Moose, wild boar, roedeer, red fox, badger
-- **Misclassification correction**: Automatically corrects common COCO misclassifications
-- **Species mapping**: Maps generic detections to Swedish wildlife
-- **Confidence scoring**: Calibrated confidence scores for Swedish species
+- **Optimeret til svenske arter**: Elg, vildsvin, rådyr, ræv, grævling
+- **Misklassifikations korrektion**: Korrigerer automatisk almindelige COCO misklassifikationer
+- **Art mapping**: Mapper generiske detektioner til svensk vildt
+- **Confidence scoring**: Kalibrerede confidence scores for svenske arter
 
-#### **Wildlife Detector (Generic)**
-- **YOLO-based detection**: Standard YOLOv8 object detection
-- **COCO dataset support**: All 80 COCO classes
-- **Custom model support**: Load custom trained models
-- **Batch processing**: Efficient batch inference
+#### **Wildlife Detector (Generisk)**
+- **YOLO-baseret detektion**: Standard YOLOv8 objekt detektion
+- **COCO dataset support**: Alle 80 COCO klasser
+- **Custom model support**: Indlæs custom trænede modeller
+- **Batch processing**: Effektiv batch inference
 
-#### **Detection Pipeline**
+#### **Detektion Pipeline**
 ```python
-# Swedish Wildlife Detection
+# Svensk Vildt Detektion
 detector = SwedishWildlifeDetector(model_path="yolov8n.pt")
 detections = detector.predict(image_path)
 
-# Generic Wildlife Detection  
+# Generisk Vildt Detektion  
 detector = WildlifeDetector(model_path="custom_model.pt")
 detections = detector.predict(image_path)
 ```
 
-**CLI Commands**:
+**CLI Kommandoer**:
 ```bash
 munin ingest /input /output --extensions jpg,mp4
 munin process /data --stage1 --stage2
@@ -116,100 +116,100 @@ munin upload /data --cloud aws
 
 ## 🧠 Hugin (Thought Bringer)
 
-**Purpose**: Analytics, insights, and visualization
+**Formål**: Analyse, indsigt og visualisering
 
-**Key Features**:
-- Wildlife behavior analysis
-- Population trend prediction
-- Conservation reporting
-- Interactive dashboards
-- Research data export
+**Nøglefunktioner**:
+- Vildt adfærdsanalyse
+- Populationstrends forudsigelse
+- Naturbeskyttelses rapportering
+- Interaktive dashboards
+- Forskningsdata eksport
 
-**CLI Commands**:
+**CLI Kommandoer**:
 ```bash
 hugin analyze /data --species moose
 hugin report /data --format pdf
 hugin dashboard /data --web
 ```
 
-## 🛠️ Technology Stack
+## 🛠️ Teknologi Stack
 
-### Core Technologies
-- **Python 3.9+**: Main development language
+### Core Teknologier
+- **Python 3.9+**: Hovedudviklingssprog
 - **PyTorch**: Machine learning framework
-- **YOLOv8**: Object detection models
-- **OpenCV**: Image/video processing
+- **YOLOv8**: Objekt detektion modeller
+- **OpenCV**: Billed/video procesering
 - **FastAPI**: Web API framework
 
-### Video Processing Technologies
-- **PyAV**: High-performance video frame extraction
-- **Decord**: GPU-accelerated video decoding
-- **FFmpeg**: Video format conversion and processing
-- **CUDA**: GPU acceleration for video processing
-- **Multiprocessing**: Parallel video processing
+### Video Procesering Teknologier
+- **PyAV**: Højydelses video frame ekstraktion
+- **Decord**: GPU-accelereret video dekodning
+- **FFmpeg**: Video format konvertering og procesering
+- **CUDA**: GPU acceleration til video procesering
+- **Multiprocessing**: Parallel video procesering
 
-### Wildlife Detection Technologies
-- **YOLOv8**: State-of-the-art object detection
-- **Swedish Wildlife Detector**: Custom species mapping
-- **COCO Dataset**: 80-class object detection
-- **TensorRT**: GPU inference optimization
+### Vildt Detektion Teknologier
+- **YOLOv8**: State-of-the-art objekt detektion
+- **Swedish Wildlife Detector**: Custom art mapping
+- **COCO Dataset**: 80-klasse objekt detektion
+- **TensorRT**: GPU inference optimering
 - **ONNX**: Cross-platform model deployment
 
-### Cloud Technologies
+### Cloud Teknologier
 - **AWS**: S3, Batch, ECR, CloudFormation
-- **Docker**: Containerization
+- **Docker**: Containerisering
 - **Terraform**: Infrastructure as Code
 
-### Data Formats
-- **Parquet**: Columnar data storage
-- **JSONL**: Manifest files
-- **SQLite**: Local database
-- **CSV**: Export format
+### Data Formater
+- **Parquet**: Kolonne data lagring
+- **JSONL**: Manifest filer
+- **SQLite**: Lokal database
+- **CSV**: Eksport format
 
-## 📊 Current Status
+## 📊 Nuværende Status
 
 ### ✅ Completed (Munin)
-- Core pipeline implementation (Stage 0-2)
-- Swedish wildlife detection optimization
-- Video processing with frame extraction
-- Multiple wildlife detector models
-- Cloud-optional architecture
-- AWS infrastructure setup
-- Security implementation
-- Comprehensive testing
+- Core pipeline implementering (Stage 0-2)
+- Svensk vildt detektion optimering
+- Video procesering med frame ekstraktion
+- Flere vildt detektor modeller
+- Cloud-optional arkitektur
+- AWS infrastruktur setup
+- Sikkerhed implementering
+- Omfattende testning
 
-### 🚧 In Progress (Hugin)
-- Analytics framework
-- Data models and validation
-- Basic reporting capabilities
+### 🚧 I Gang (Hugin)
+- Analyse framework
+- Data modeller og validering
+- Grundlæggende rapporterings funktioner
 
 ### 📋 Roadmap
-See [ROADMAP.md](docs/ROADMAP.md) for detailed development plan.
+Se [ROADMAP.md](docs/ROADMAP.md) for detaljeret udviklingsplan.
 
 ## 🔧 Setup & Deployment
 
-- **Local Setup**: [INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md)
-- **Cloud Optimization**: [CLOUD_OPTIMIZATION.md](docs/CLOUD_OPTIMIZATION.md)
+- **Lokal Setup**: [INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md)
+- **Cloud Optimering**: [CLOUD_OPTIMIZATION.md](docs/CLOUD_OPTIMIZATION.md)
 - **Utilities & Tools**: [UTILITIES.md](docs/UTILITIES.md)
 
-## 🤝 Contributing
+## 🤝 Bidrag
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+1. Fork repository
+2. Opret feature branch
+3. Lav dine ændringer
+4. Tilføj tests
+5. Submit pull request
 
-## 📄 License
+## 📄 Licens
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Dette projekt er licenseret under MIT License - se LICENSE filen for detaljer.
 
 ## 🐦‍⬛ Odins Ravne Team
 
-- **Munin**: Memory Keeper - Data ingestion and processing
-- **Hugin**: Thought Bringer - Analytics and insights
-- **Odin**: All-Father - Overall system architecture
+- **Munin**: Memory Keeper - Data indtagelse og procesering
+- **Hugin**: Thought Bringer - Analyse og indsigt
+- **Odin**: All-Father - Overordnet system arkitektur
 
 ---
 
-**Odins Ravne** - Bringing wisdom to wildlife conservation through technology.
+**Odins Ravne** - Bringer visdom til vildtbeskyttelse gennem teknologi.
