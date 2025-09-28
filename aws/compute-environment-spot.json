@@ -1,0 +1,62 @@
+{
+  "computeEnvironmentName": "wildlife-pipeline-spot-gpu",
+  "type": "MANAGED",
+  "state": "ENABLED",
+  "computeResources": {
+    "type": "EC2",
+    "minvCpus": 0,
+    "maxvCpus": 1000,
+    "desiredvCpus": 0,
+    "instanceTypes": [
+      "g4dn.xlarge",
+      "g4dn.2xlarge", 
+      "g4dn.4xlarge",
+      "g4dn.8xlarge",
+      "g4dn.12xlarge",
+      "g4dn.16xlarge",
+      "g5.xlarge",
+      "g5.2xlarge",
+      "g5.4xlarge",
+      "g5.8xlarge",
+      "g5.12xlarge",
+      "g5.16xlarge",
+      "g5.24xlarge",
+      "g5.48xlarge",
+      "p3.2xlarge",
+      "p3.8xlarge",
+      "p3.16xlarge",
+      "p3dn.24xlarge",
+      "p4d.24xlarge"
+    ],
+    "subnets": [
+      "subnet-12345678",
+      "subnet-87654321"
+    ],
+    "securityGroupIds": [
+      "sg-12345678"
+    ],
+    "instanceRole": "arn:aws:iam::ACCOUNT_ID:instance-profile/wildlife-pipeline-batch-instance-profile",
+    "tags": {
+      "Environment": "production",
+      "Application": "wildlife-pipeline",
+      "InstanceType": "spot",
+      "GPU": "enabled"
+    },
+    "bidPercentage": 80,
+    "spotIamFleetRole": "arn:aws:iam::ACCOUNT_ID:role/aws-ec2-spot-fleet-tagging-role",
+    "launchTemplate": {
+      "launchTemplateName": "wildlife-pipeline-gpu-template",
+      "version": "$Latest"
+    },
+    "ec2KeyPair": "wildlife-pipeline-keypair",
+    "imageId": "ami-12345678",
+    "placementGroup": "wildlife-pipeline-placement-group"
+  },
+  "serviceRole": "arn:aws:iam::ACCOUNT_ID:role/aws-batch-service-role",
+  "tags": {
+    "Environment": "production",
+    "Application": "wildlife-pipeline",
+    "ComputeType": "spot",
+    "GPU": "enabled"
+  }
+}

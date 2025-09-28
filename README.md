@@ -1,6 +1,33 @@
-# Wildlife Image Pipeline (Python)
+# Odins Ravne 🐦‍⬛
 
-A production-ready, cloud-optional wildlife detection pipeline that:
+*"Munin brings memories home, Hugin brings thoughts to mind"*
+
+A production-ready, cloud-optional wildlife detection pipeline inspired by Odin's ravens from Norse mythology. Just as Munin (Memory) and Hugin (Thought) served as Odin's eyes and ears, this pipeline serves as your intelligent observer in the wild.
+
+## The Story of Odin's Ravens
+
+In Norse mythology, Odin had two ravens:
+- **Munin** (Memory) - The raven who brings back memories and data from the world
+- **Hugin** (Thought) - The raven who brings back thoughts and insights
+
+Our pipeline follows this ancient wisdom:
+
+### Munin - The Memory Keeper (Stage 0-2)
+*"Munin brings memories home"*
+- **Data Ingestion**: Collects raw camera trap data
+- **Metadata Extraction**: Preserves EXIF, GPS, and temporal information  
+- **Storage**: Safely stores memories in Parquet and manifest files
+- **Stage 1**: Detects wildlife and crops regions of interest
+- **Stage 2**: Classifies detected animals with confidence
+
+### Hugin - The Thought Bringer (Stage 2+)
+*"Hugin brings thoughts to mind"*
+- **Analysis**: Processes and interprets the collected memories
+- **Insights**: Generates patterns, trends, and behavioral analysis
+- **Reporting**: Compresses observations and creates meaningful reports
+- **Intelligence**: Provides actionable insights from the data
+
+## What Odins Ravne Does
 - Processes images and videos from camera trap data
 - Extracts metadata (EXIF + filesystem timestamps + GPS coordinates)
 - Runs a **two-stage pipeline**: Stage-1 detection + Stage-2 classification
@@ -50,27 +77,27 @@ source .venv/bin/activate
 # 2) Install dependencies
 pip install -r requirements.txt
 
-# 3) Run Stage-1: Detection and cropping
-python -m src.wildlife_pipeline.cloud.cli stage1 \
+# 3) Run Munin Stage-1: Detection and cropping (Memory)
+munin-stage1 \
   --profile local \
   --input file://./data/images \
   --output file://./results
 
-# 4) Run Stage-2: Classification
-python -m src.wildlife_pipeline.cloud.cli stage2 \
+# 4) Run Munin Stage-2: Classification (Memory)
+munin-stage2 \
   --profile local \
   --manifest file://./results/stage1/manifest.jsonl \
   --output file://./results
 
-# 5) Run Stage-3: Reporting and compression
-python -m src.wildlife_pipeline.cloud.cli stage3 \
+# 5) Run Hugin Stage-3: Reporting and compression (Thought)
+hugin-stage3 \
   --profile local \
   --manifest file://./results/stage1/manifest.jsonl \
   --predictions file://./results/stage2/predictions.jsonl \
   --output file://./results
 
 # 6) Materialize results to Parquet
-python -m src.wildlife_pipeline.cloud.cli materialize \
+munin-materialize \
   --profile local \
   --manifest file://./results/stage1/manifest.jsonl \
   --output file://./results/final.parquet
@@ -88,31 +115,56 @@ aws cloudformation create-stack \
 docker build -f docker/Dockerfile.aws-gpu -t wildlife-detection:latest .
 docker push your-account.dkr.ecr.eu-north-1.amazonaws.com/wildlife-detection:latest
 
-# 3) Run Stage-1: Detection with GPU acceleration
-python -m src.wildlife_pipeline.cloud.cli stage1 \
+# 3) Run Munin Stage-1: Detection with GPU acceleration (Memory)
+munin-stage1 \
   --profile cloud \
   --input s3://wildlife-detection-bucket/data \
   --output s3://wildlife-detection-bucket/results
 
-# 4) Run Stage-2: Classification
-python -m src.wildlife_pipeline.cloud.cli stage2 \
+# 4) Run Munin Stage-2: Classification (Memory)
+munin-stage2 \
   --profile cloud \
   --manifest s3://wildlife-detection-bucket/results/stage1/manifest.jsonl \
   --output s3://wildlife-detection-bucket/results
 
-# 5) Run Stage-3: Reporting and compression
-python -m src.wildlife_pipeline.cloud.cli stage3 \
+# 5) Run Hugin Stage-3: Reporting and compression (Thought)
+hugin-stage3 \
   --profile cloud \
   --manifest s3://wildlife-detection-bucket/results/stage1/manifest.jsonl \
   --predictions s3://wildlife-detection-bucket/results/stage2/predictions.jsonl \
   --output s3://wildlife-detection-bucket/results
 
 # 6) Materialize results
-python -m src.wildlife_pipeline.cloud.cli materialize \
+munin-materialize \
   --profile cloud \
   --manifest s3://wildlife-detection-bucket/results/stage1/manifest.jsonl \
   --output s3://wildlife-detection-bucket/results/final.parquet
 ```
+
+## The Wisdom of Odin's Ravens
+
+### Munin - The Memory Keeper
+*"Munin brings memories home"*
+
+Munin is responsible for collecting and preserving all the raw data from your camera traps:
+
+- **Data Ingestion**: Efficiently processes thousands of images and videos
+- **Metadata Preservation**: Extracts and stores EXIF data, GPS coordinates, timestamps
+- **Quality Control**: Filters out poor quality detections and routes doubtful cases for review
+- **Storage**: Safely stores all memories in structured formats (Parquet, manifest files)
+- **Stage 1**: Detects wildlife and crops regions of interest
+- **Stage 2**: Classifies detected animals with confidence scores
+
+### Hugin - The Thought Bringer  
+*"Hugin brings thoughts to mind"*
+
+Hugin processes the memories collected by Munin and transforms them into actionable insights:
+
+- **Pattern Recognition**: Identifies behavioral patterns and movement trends
+- **Temporal Analysis**: Compresses observations to avoid duplicate logging
+- **Spatial Intelligence**: Analyzes GPS data for habitat usage patterns
+- **Reporting**: Generates comprehensive reports and analytics
+- **Insights**: Provides actionable intelligence from the collected data
 
 ## Architecture
 
@@ -175,7 +227,7 @@ Convert Parquet output to SQLite for analysis:
 
 ```bash
 # Convert Parquet to SQLite
-python -m src.wildlife_pipeline.tools.parquet_to_sqlite \
+ravne-parquet-to-sqlite \
   --input ./results/final.parquet \
   --output ./results/wildlife.db \
   --table observations

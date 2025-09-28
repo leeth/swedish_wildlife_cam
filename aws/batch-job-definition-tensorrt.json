@@ -1,0 +1,140 @@
+{
+  "jobDefinitionName": "wildlife-pipeline-tensorrt",
+  "type": "container",
+  "platformCapabilities": ["EC2"],
+  "timeout": {
+    "attemptDurationSeconds": 3600
+  },
+  "retryStrategy": {
+    "attempts": 3,
+    "evaluateOnExit": [
+      {
+        "onStatusReason": "GPU_ERROR",
+        "action": "RETRY"
+      },
+      {
+        "onStatusReason": "OutOfMemory",
+        "action": "RETRY"
+      },
+      {
+        "onExitCode": 1,
+        "action": "RETRY"
+      },
+      {
+        "onExitCode": 2,
+        "action": "EXIT"
+      }
+    ]
+  },
+  "containerProperties": {
+    "image": "wildlife-pipeline-tensorrt:latest",
+    "vcpus": 4,
+    "memory": 16384,
+    "jobRoleArn": "arn:aws:iam::ACCOUNT_ID:role/wildlife-pipeline-batch-role",
+    "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/wildlife-pipeline-batch-execution-role",
+    "resourceRequirements": [
+      {
+        "type": "GPU",
+        "value": "1"
+      }
+    ],
+    "environment": [
+      {
+        "name": "CUDA_VISIBLE_DEVICES",
+        "value": "0"
+      },
+      {
+        "name": "PYTORCH_CUDA_ALLOC_CONF",
+        "value": "max_split_size_mb:512"
+      },
+      {
+        "name": "OPENCV_GPU_ENABLED",
+        "value": "1"
+      },
+      {
+        "name": "TENSORRT_CACHE_DIR",
+        "value": "/tmp/tensorrt_cache"
+      },
+      {
+        "name": "ONNX_CACHE_DIR",
+        "value": "/tmp/onnx_cache"
+      },
+      {
+        "name": "BATCH_SIZE",
+        "value": "32"
+      },
+      {
+        "name": "IMAGE_SIZE",
+        "value": "640"
+      },
+      {
+        "name": "MAX_IMAGES_PER_JOB",
+        "value": "1000"
+      },
+      {
+        "name": "PREFETCH_BATCHES",
+        "value": "2"
+      },
+      {
+        "name": "GPU_MEMORY_FRACTION",
+        "value": "0.8"
+      },
+      {
+        "name": "AWS_DEFAULT_REGION",
+        "value": "us-east-1"
+      }
+    ],
+    "mountPoints": [
+      {
+        "sourceVolume": "tensorrt-cache",
+        "containerPath": "/tmp/tensorrt_cache",
+        "readOnly": false
+      },
+      {
+        "sourceVolume": "onnx-cache",
+        "containerPath": "/tmp/onnx_cache",
+        "readOnly": false
+      }
+    ],
+    "volumes": [
+      {
+        "name": "tensorrt-cache",
+        "host": {
+          "sourcePath": "/tmp/tensorrt_cache"
+        }
+      },
+      {
+        "name": "onnx-cache",
+        "host": {
+          "sourcePath": "/tmp/onnx_cache"
+        }
+      }
+    ],
+    "ulimits": [
+      {
+        "name": "memlock",
+        "softLimit": -1,
+        "hardLimit": -1
+      },
+      {
+        "name": "stack",
+        "softLimit": 67108864,
+        "hardLimit": 67108864
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/aws/batch/wildlife-pipeline",
+        "awslogs-region": "us-east-1",
+        "awslogs-stream-prefix": "tensorrt"
+      }
+    }
+  },
+  "tags": {
+    "Environment": "production",
+    "Application": "wildlife-pipeline",
+    "Optimization": "tensorrt",
+    "GPU": "enabled"
+  }
+}

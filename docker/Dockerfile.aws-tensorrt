@@ -1,0 +1,137 @@
+# AWS Batch optimized Dockerfile with TensorRT support
+# Based on NVIDIA CUDA runtime with TensorRT for high-performance inference
+
+FROM nvidia/cuda:11.8-devel-ubuntu22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3.10-dev \
+    python3-pip \
+    python3.10-venv \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    curl \
+    unzip \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgcc-s1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symbolic link for python
+RUN ln -s /usr/bin/python3.10 /usr/bin/python
+
+# Install TensorRT
+RUN wget https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/8.6.1/tars/tensorrt-8.6.1.6.linux.x86_64-gnu.cuda-11.8.cudnn8.6.tar.gz \
+    && tar -xzf tensorrt-8.6.1.6.linux.x86_64-gnu.cuda-11.8.cudnn8.6.tar.gz \
+    && cp -r TensorRT-8.6.1.6/include/* /usr/local/include/ \
+    && cp -r TensorRT-8.6.1.6/lib/* /usr/local/lib/ \
+    && rm -rf TensorRT-8.6.1.6 tensorrt-8.6.1.6.linux.x86_64-gnu.cuda-11.8.cudnn8.6.tar.gz
+
+# Install cuDNN
+RUN wget https://developer.download.nvidia.com/compute/cudnn/8.9.2/local_installers/11.x/cudnn-linux-x86_64-8.9.2.26_cuda11-archive.tar.xz \
+    && tar -xf cudnn-linux-x86_64-8.9.2.26_cuda11-archive.tar.xz \
+    && cp -r cudnn-linux-x86_64-8.9.2.26_cuda11-archive/include/* /usr/local/include/ \
+    && cp -r cudnn-linux-x86_64-8.9.2.26_cuda11-archive/lib/* /usr/local/lib/ \
+    && rm -rf cudnn-linux-x86_64-8.9.2.26_cuda11-archive cudnn-linux-x86_64-8.9.2.26_cuda11-archive.tar.xz
+
+# Install Python dependencies
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install PyTorch with CUDA support
+RUN pip install --no-cache-dir torch==2.0.1+cu118 torchvision==0.15.2+cu118 --index-url https://download.pytorch.org/whl/cu118
+
+# Install ONNX and ONNX Runtime with GPU support
+RUN pip install --no-cache-dir onnx==1.14.0 onnxruntime-gpu==1.15.1
+
+# Install TensorRT Python bindings
+RUN pip install --no-cache-dir tensorrt==8.6.1
+
+# Install other dependencies
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Install additional GPU-optimized packages
+RUN pip install --no-cache-dir \
+    opencv-python-headless==4.8.0.76 \
+    av==10.0.0 \
+    polars==0.19.0 \
+    pyarrow==12.0.1 \
+    boto3==1.26.137 \
+    s3fs==2023.6.0 \
+    smart-open==6.3.0 \
+    fsspec==2023.6.0
+
+# Create application directory
+WORKDIR /app
+
+# Copy application code
+COPY src/ /app/src/
+COPY profiles/ /app/profiles/
+COPY scripts/ /app/scripts/
+COPY pyproject.toml /app/
+COPY README.md /app/
+
+# Install the application
+RUN pip install -e /app
+
+# Create cache directories
+RUN mkdir -p /app/.cache /app/.wildlife_cache
+
+# Set up environment for AWS Batch
+ENV AWS_DEFAULT_REGION=us-east-1
+ENV AWS_BATCH_JOB_ID=local
+ENV AWS_BATCH_JOB_ATTEMPT=1
+ENV AWS_BATCH_JOB_QUEUE=wildlife-pipeline-queue
+ENV AWS_BATCH_JOB_DEFINITION=wildlife-pipeline-job
+
+# GPU optimization environment variables
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+ENV OPENCV_GPU_ENABLED=1
+ENV TENSORRT_CACHE_DIR=/app/.cache/tensorrt
+ENV ONNX_CACHE_DIR=/app/.cache/onnx
+
+# Batch processing environment variables
+ENV BATCH_SIZE=32
+ENV IMAGE_SIZE=640
+ENV MAX_IMAGES_PER_JOB=1000
+ENV PREFETCH_BATCHES=2
+ENV GPU_MEMORY_FRACTION=0.8
+
+# Create non-root user for security
+RUN useradd -m -u 1000 wildlife && \
+    chown -R wildlife:wildlife /app && \
+    chown -R wildlife:wildlife /app/.cache && \
+    chown -R wildlife:wildlife /app/.wildlife_cache
+
+USER wildlife
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import torch; print('GPU available:', torch.cuda.is_available())" || exit 1
+
+# Default command
+CMD ["python", "-m", "src.wildlife_pipeline.cloud.cli", "--help"]
+
+# Labels for metadata
+LABEL maintainer="Wildlife Pipeline Team"
+LABEL version="0.1.0"
+LABEL description="Wildlife detection pipeline with TensorRT optimization"
+LABEL cuda.version="11.8"
+LABEL tensorrt.version="8.6.1"
+LABEL python.version="3.10"
