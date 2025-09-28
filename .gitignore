@@ -14,3 +14,4 @@ aws-test-credentials.json
 *.credentials.json
 # AWS credentials and sensitive files
 location_classifier.db
+SECURITY_REVIEW.md
