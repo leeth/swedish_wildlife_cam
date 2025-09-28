@@ -262,6 +262,42 @@ scripts/monitoring/deploy_monitoring.py \
   --dashboards
 ```
 
+## ☁️ Cloud Optimization Architecture
+
+```mermaid
+graph TB
+    A[Cloud Optimization] --> B[GPU Optimization]
+    A --> C[Cost Optimization]
+    A --> D[Performance Optimization]
+    
+    B --> E[GPU Instances]
+    B --> F[Batch Processing]
+    B --> G[Model Optimization]
+    
+    C --> H[Spot Instances]
+    C --> I[Auto Scaling]
+    C --> J[Resource Monitoring]
+    
+    D --> K[Performance Testing]
+    D --> L[Cost Analysis]
+    D --> M[Optimization Suggestions]
+    
+    N[Munin Processing] --> O[Data Ingestion]
+    O --> P[Video Processing]
+    P --> Q[Object Detection]
+    
+    R[Hugin Analytics] --> S[GPS Clustering]
+    S --> T[Data Condensation]
+    T --> U[Final Reports]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style N fill:#f3e5f5
+    style R fill:#e8f5e8
+```
+
 ### Performance Testing
 ```bash
 # Run performance tests

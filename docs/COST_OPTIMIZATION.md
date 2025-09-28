@@ -17,6 +17,39 @@ cd src/munin/ && pip install -e .
 cd ../hugin/ && pip install -e .
 ```
 
+## 💰 Cost Optimization Architecture
+
+```mermaid
+graph TB
+    A[Cost Optimization Manager] --> B[Spot Instances]
+    A --> C[Auto Scaling]
+    A --> D[Resource Monitoring]
+    
+    B --> E[Batch Processing]
+    C --> F[Dynamic Scaling]
+    D --> G[Cost Alerts]
+    
+    H[Munin Processing] --> I[Data Ingestion]
+    I --> J[Video Processing]
+    J --> K[Object Detection]
+    
+    L[Hugin Analytics] --> M[GPS Clustering]
+    M --> N[Data Condensation]
+    N --> O[Final Reports]
+    
+    P[Odin Infrastructure] --> Q[AWS Batch]
+    Q --> R[Spot Instances]
+    R --> S[Cost Optimization]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#f3e5f5
+    style D fill:#f3e5f5
+    style H fill:#f3e5f5
+    style L fill:#e8f5e8
+    style P fill:#fff3e0
+```
+
 ### Deploy Cost-Optimized Infrastructure
 ```bash
 # Deploy complete cost-optimized infrastructure

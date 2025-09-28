@@ -2,6 +2,44 @@
 
 **Odins Ravne** - Utility scripts and tools for wildlife processing
 
+## 🛠️ Utilities Architecture
+
+```mermaid
+graph TB
+    A[Utilities System] --> B[Infrastructure Scripts]
+    A --> C[Image Tools]
+    A --> D[Data Upload]
+    A --> E[Testing Scripts]
+    A --> F[Monitoring Tools]
+    
+    B --> G[AWS Setup]
+    B --> H[User Management]
+    B --> I[Testing]
+    
+    C --> J[Timestamp Fix]
+    C --> K[GPS Extraction]
+    C --> L[Location Classification]
+    
+    D --> M[S3 Upload]
+    D --> N[Data Sync]
+    D --> O[Backup]
+    
+    E --> P[Performance Tests]
+    E --> Q[Integration Tests]
+    E --> R[Cost Analysis]
+    
+    F --> S[System Monitoring]
+    F --> T[Wildlife Monitoring]
+    F --> U[Resource Monitoring]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#ffecb3
+    style F fill:#f1f8e9
+```
+
 ## 📁 Scripts Directory Structure
 
 ```

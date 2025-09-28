@@ -34,6 +34,35 @@ src/odin/cli.py --config conf/profiles/local.yaml infrastructure status
 src/odin/cli.py --config conf/profiles/local.yaml pipeline run
 ```
 
+## 🏠 Local Development Architecture
+
+```mermaid
+graph TB
+    A[Local Development] --> B[Docker Compose]
+    B --> C[LocalStack]
+    B --> D[MinIO]
+    B --> E[Redis]
+    B --> F[PostgreSQL]
+    
+    G[Munin Processing] --> H[Data Ingestion]
+    H --> I[Video Processing]
+    I --> J[Object Detection]
+    
+    K[Hugin Analytics] --> L[GPS Clustering]
+    L --> M[Data Condensation]
+    M --> N[Final Reports]
+    
+    O[Odin CLI] --> P[Infrastructure Setup]
+    P --> Q[Pipeline Execution]
+    Q --> R[Data Management]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style G fill:#f3e5f5
+    style K fill:#e8f5e8
+    style O fill:#fff3e0
+```
+
 ### 3. Run Local Tests
 
 ```bash

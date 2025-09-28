@@ -24,6 +24,38 @@ scripts/infrastructure/run_offline_camera_batch.sh \
   file:///data/camera1 s3://bucket/output
 ```
 
+## 📷 Offline Camera Processing Architecture
+
+```mermaid
+graph TB
+    A[Offline Camera Data] --> B[Cost Optimization Manager]
+    B --> C[Spot Instances]
+    B --> D[Auto Scaling]
+    B --> E[Resource Monitoring]
+    
+    F[Munin Processing] --> G[Data Ingestion]
+    G --> H[Video Processing]
+    H --> I[Object Detection]
+    
+    J[Hugin Analytics] --> K[GPS Clustering]
+    K --> L[Data Condensation]
+    L --> M[Final Reports]
+    
+    N[Odin Infrastructure] --> O[AWS Batch]
+    O --> P[Spot Instances]
+    P --> Q[Cost Optimization]
+    
+    R[Stage 3 Download] --> S[Local Analysis]
+    S --> T[Report Generation]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style F fill:#f3e5f5
+    style J fill:#e8f5e8
+    style N fill:#fff3e0
+    style R fill:#ffecb3
+```
+
 ### Using Munin Cloud CLI Directly
 ```bash
 # Cost-optimized batch processing

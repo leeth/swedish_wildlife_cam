@@ -22,6 +22,39 @@ src/munin/cli.py --version
 src/hugin/cli.py --version
 ```
 
+## 🏗️ Infrastructure Architecture
+
+```mermaid
+graph TB
+    A[Odin Infrastructure Manager] --> B[Local Development]
+    A --> C[Cloud Deployment]
+    
+    B --> D[Docker Compose]
+    D --> E[LocalStack]
+    D --> F[MinIO]
+    D --> G[Redis]
+    D --> H[PostgreSQL]
+    
+    C --> I[AWS S3]
+    C --> J[AWS Batch]
+    C --> K[AWS ECR]
+    C --> L[CloudFormation]
+    
+    M[Munin Processing] --> N[Data Ingestion]
+    N --> O[Video Processing]
+    O --> P[Object Detection]
+    
+    Q[Hugin Analytics] --> R[GPS Clustering]
+    R --> S[Data Condensation]
+    S --> T[Final Reports]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style M fill:#f3e5f5
+    style Q fill:#e8f5e8
+```
+
 ### AWS Setup
 ```bash
 # Configure Odin
