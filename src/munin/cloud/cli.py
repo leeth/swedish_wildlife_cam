@@ -7,6 +7,8 @@ import argparse
 from pathlib import Path
 from typing import List, Dict, Any
 import json
+import time
+from datetime import datetime
 
 from .config import CloudConfig
 from .interfaces import ManifestEntry, Stage2Entry
@@ -71,6 +73,55 @@ def create_parser() -> argparse.ArgumentParser:
     # Status command
     status_parser = subparsers.add_parser("status", help="Check pipeline status")
     status_parser.add_argument("--output", required=True, help="Output prefix to check")
+    
+    # Cost-optimized batch processing command
+    batch_parser = subparsers.add_parser("batch", help="Run cost-optimized batch processing")
+    batch_parser.add_argument("--input", required=True, help="Input prefix (file://, s3://, gs://)")
+    batch_parser.add_argument("--output", required=True, help="Output prefix (file://, s3://, gs://)")
+    batch_parser.add_argument("--local-output", help="Local output directory for Stage 3 results")
+    batch_parser.add_argument("--model", help="Model path override")
+    batch_parser.add_argument("--conf-threshold", type=float, help="Confidence threshold")
+    batch_parser.add_argument("--compression-window", type=int, default=10, 
+                              help="Stage 3 compression window in minutes (default: 10)")
+    batch_parser.add_argument("--min-confidence", type=float, default=0.5,
+                              help="Minimum confidence for observations (default: 0.5)")
+    batch_parser.add_argument("--min-duration", type=float, default=5.0,
+                              help="Minimum duration in seconds (default: 5.0)")
+    batch_parser.add_argument("--spot-bid-percentage", type=int, default=70,
+                              help="Spot instance bid percentage (default: 70)")
+    batch_parser.add_argument("--max-vcpus", type=int, default=100,
+                              help="Maximum vCPUs for compute environment (default: 100)")
+    batch_parser.add_argument("--gpu-required", action="store_true", default=True,
+                              help="Require GPU instances (default: True)")
+    batch_parser.add_argument("--priority", choices=["low", "normal", "high"], default="normal",
+                              help="Job priority (default: normal)")
+    batch_parser.add_argument("--download-stage3", action="store_true",
+                              help="Download Stage 3 output locally")
+    batch_parser.add_argument("--cost-report", action="store_true",
+                              help="Generate cost optimization report")
+    
+    # Cost optimization management commands
+    cost_parser = subparsers.add_parser("cost", help="Cost optimization management")
+    cost_subparsers = cost_parser.add_subparsers(dest="cost_command", help="Cost optimization commands")
+    
+    # Setup infrastructure
+    setup_parser = cost_subparsers.add_parser("setup", help="Setup cost-optimized infrastructure")
+    setup_parser.add_argument("--job-count", type=int, default=1, help="Number of jobs to process")
+    setup_parser.add_argument("--gpu-required", action="store_true", default=True, help="Require GPU instances")
+    
+    # Teardown infrastructure
+    teardown_parser = cost_subparsers.add_parser("teardown", help="Teardown infrastructure")
+    
+    # Status and costs
+    cost_status_parser = cost_subparsers.add_parser("status", help="Check infrastructure status")
+    cost_costs_parser = cost_subparsers.add_parser("costs", help="Get cost metrics")
+    
+    # Download Stage 3 output
+    download_parser = cost_subparsers.add_parser("download-stage3", help="Download Stage 3 output locally")
+    download_parser.add_argument("--cloud-path", required=True, help="Cloud output path")
+    download_parser.add_argument("--local-path", required=True, help="Local output directory")
+    download_parser.add_argument("--summary", action="store_true", help="Show download summary")
+    download_parser.add_argument("--create-runner", action="store_true", help="Create local Stage 3 runner")
     
     return parser
 
@@ -361,6 +412,198 @@ def run_stage3(args, config: CloudConfig) -> None:
         raise
 
 
+def run_cost_optimized_batch(args, config: CloudConfig):
+    """Run cost-optimized batch processing for offline camera data."""
+    logger.log_stage_start("cost_optimized_batch", profile=config.profile, 
+                          input=args.input, output=args.output)
+    
+    try:
+        # Import cost optimization modules
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "scripts" / "infrastructure"))
+        
+        from cost_optimization_manager import CostOptimizationManager
+        from batch_workflow_manager import BatchWorkflowManager
+        from stage3_output_downloader import Stage3OutputDownloader
+        
+        # Initialize cost optimization components
+        cost_manager = CostOptimizationManager(region="eu-north-1", environment="production")
+        batch_manager = BatchWorkflowManager(region="eu-north-1", environment="production")
+        downloader = Stage3OutputDownloader(region="eu-north-1", profile="cloud")
+        
+        logger.info("🚀 Starting cost-optimized batch processing for offline camera data")
+        logger.info(f"Input: {args.input}")
+        logger.info(f"Output: {args.output}")
+        logger.info(f"Spot bid percentage: {args.spot_bid_percentage}%")
+        logger.info(f"GPU required: {args.gpu_required}")
+        
+        # Step 1: Setup cost-optimized infrastructure
+        logger.info("Step 1: Setting up cost-optimized infrastructure")
+        if not cost_manager.setup_infrastructure(
+            job_count=1,  # Will be determined by input data
+            gpu_required=args.gpu_required
+        ):
+            raise Exception("Infrastructure setup failed")
+        
+        # Step 2: Run complete pipeline with cost optimization
+        logger.info("Step 2: Running complete pipeline with cost optimization")
+        
+        # Create batch configuration for offline camera data
+        batch_config = {
+            'batch_id': f"offline-camera-{int(time.time())}",
+            'jobs': [{
+                'name': 'offline-camera-processing',
+                'parameters': {
+                    'input_path': args.input,
+                    'output_path': args.output,
+                    'model': args.model,
+                    'conf_threshold': args.conf_threshold,
+                    'compression_window': args.compression_window,
+                    'min_confidence': args.min_confidence,
+                    'min_duration': args.min_duration,
+                    'cost_optimization': 'enabled',
+                    'spot_instance_preferred': 'true',
+                    'fallback_to_ondemand': 'true'
+                },
+                'gpu_required': args.gpu_required,
+                'priority': args.priority
+            }],
+            'gpu_required': args.gpu_required,
+            'max_parallel_jobs': 1,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        # Process batch with cost optimization
+        batch_result = batch_manager.process_batch(batch_config)
+        
+        if batch_result.get('status') != 'completed':
+            raise Exception(f"Batch processing failed: {batch_result.get('error', 'Unknown error')}")
+        
+        # Step 3: Download Stage 3 output locally if requested
+        if args.download_stage3 and args.local_output:
+            logger.info("Step 3: Downloading Stage 3 output locally")
+            download_result = downloader.download_stage3_output(
+                cloud_output_path=args.output,
+                local_output_path=args.local_output,
+                include_observations=True,
+                include_report=True
+            )
+            
+            if 'error' in download_result:
+                logger.warning(f"Stage 3 download failed: {download_result['error']}")
+            else:
+                logger.info(f"✅ Stage 3 output downloaded to: {args.local_output}")
+                
+                # Create local Stage 3 runner
+                runner_path = downloader.create_local_stage3_runner(args.local_output)
+                if runner_path:
+                    logger.info(f"✅ Local Stage 3 runner created: {runner_path}")
+        
+        # Step 4: Generate cost report if requested
+        if args.cost_report:
+            logger.info("Step 4: Generating cost optimization report")
+            cost_metrics = cost_manager.get_cost_metrics()
+            logger.info(f"💰 Cost metrics: {json.dumps(cost_metrics, indent=2)}")
+        
+        # Step 5: Teardown infrastructure
+        logger.info("Step 5: Tearing down infrastructure")
+        cost_manager.teardown_infrastructure()
+        
+        logger.log_stage_complete("cost_optimized_batch", 
+                                batch_result=batch_result,
+                                cost_optimization=True,
+                                spot_instances=True)
+        
+        logger.info("✅ Cost-optimized batch processing completed!")
+        logger.info(f"📊 Results: {args.output}")
+        if args.download_stage3 and args.local_output:
+            logger.info(f"📁 Local Stage 3 output: {args.local_output}")
+        
+    except Exception as e:
+        logger.log_stage_error("cost_optimized_batch", error=str(e), 
+                              input=args.input, output=args.output)
+        # Ensure infrastructure is torn down on error
+        try:
+            cost_manager.teardown_infrastructure()
+        except:
+            pass
+        raise
+
+
+def run_cost_management(args, config: CloudConfig):
+    """Run cost optimization management commands."""
+    try:
+        # Import cost optimization modules
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "scripts" / "infrastructure"))
+        
+        from cost_optimization_manager import CostOptimizationManager
+        from stage3_output_downloader import Stage3OutputDownloader
+        
+        # Initialize cost optimization components
+        cost_manager = CostOptimizationManager(region="eu-north-1", environment="production")
+        
+        if args.cost_command == "setup":
+            logger.info("Setting up cost-optimized infrastructure")
+            success = cost_manager.setup_infrastructure(
+                job_count=args.job_count,
+                gpu_required=args.gpu_required
+            )
+            if success:
+                logger.info("✅ Infrastructure setup completed")
+            else:
+                logger.error("❌ Infrastructure setup failed")
+        
+        elif args.cost_command == "teardown":
+            logger.info("Tearing down infrastructure")
+            success = cost_manager.teardown_infrastructure()
+            if success:
+                logger.info("✅ Infrastructure teardown completed")
+            else:
+                logger.error("❌ Infrastructure teardown failed")
+        
+        elif args.cost_command == "status":
+            status = cost_manager.get_compute_environment_status()
+            logger.info(f"Infrastructure status: {json.dumps(status, indent=2)}")
+        
+        elif args.cost_command == "costs":
+            metrics = cost_manager.get_cost_metrics()
+            logger.info(f"Cost metrics: {json.dumps(metrics, indent=2)}")
+        
+        elif args.cost_command == "download-stage3":
+            logger.info("Downloading Stage 3 output locally")
+            downloader = Stage3OutputDownloader(region="eu-north-1", profile="cloud")
+            result = downloader.download_stage3_output(
+                cloud_output_path=args.cloud_path,
+                local_output_path=args.local_path,
+                include_observations=True,
+                include_report=True
+            )
+            
+            if 'error' in result:
+                logger.error(f"Download failed: {result['error']}")
+            else:
+                logger.info(f"✅ Stage 3 output downloaded to: {args.local_path}")
+                
+                if args.summary:
+                    summary = downloader.get_stage3_summary(args.local_path)
+                    logger.info(f"Download summary: {json.dumps(summary, indent=2)}")
+                
+                if args.create_runner:
+                    runner_path = downloader.create_local_stage3_runner(args.local_path)
+                    if runner_path:
+                        logger.info(f"✅ Local Stage 3 runner created: {runner_path}")
+        
+        else:
+            logger.error(f"Unknown cost command: {args.cost_command}")
+    
+    except Exception as e:
+        logger.error(f"Cost management error: {e}")
+        raise
+
+
 def main():
     """Main CLI entry point."""
     parser = create_parser()
@@ -384,6 +627,10 @@ def main():
         materialize_results(args, config)
     elif args.command == "status":
         check_status(args, config)
+    elif args.command == "batch":
+        run_cost_optimized_batch(args, config)
+    elif args.command == "cost":
+        run_cost_management(args, config)
     else:
         print(f"Unknown command: {args.command}")
 
