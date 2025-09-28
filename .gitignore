@@ -10,3 +10,7 @@ data/
 .DS_Store
 input/
 output/
+aws-test-credentials.json
+*.credentials.json
+# AWS credentials and sensitive files
+location_classifier.db
