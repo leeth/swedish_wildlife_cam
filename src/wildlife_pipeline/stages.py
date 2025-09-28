@@ -5,6 +5,10 @@ from pathlib import Path
 from PIL import Image
 
 from .detector import Detection
+from .logging_config import get_logger
+
+# Initialize logger for stages
+logger = get_logger("wildlife_pipeline.stages")
 
 
 def _clamp(value: float, low: float, high: float) -> float:
@@ -28,22 +32,42 @@ def filter_bboxes(
 
     Returns (filtered_detections, dropped_count).
     """
+    logger.info(f"🔍 Filtering {len(detections)} detections", 
+                total_detections=len(detections), image_size=(img_w, img_h),
+                confidence_threshold=conf, min_rel_area=min_rel_area, max_rel_area=max_rel_area,
+                min_aspect=min_aspect, max_aspect=max_aspect, edge_margin=edge_margin_px)
+    
     if not detections:
+        logger.info("📭 No detections to filter")
         return [], 0
 
     image_area: float = float(max(1, img_w) * max(1, img_h))
 
     kept: List[Detection] = []
     dropped: int = 0
+    dropped_reasons = {
+        'confidence': 0,
+        'area': 0,
+        'aspect_ratio': 0,
+        'edge_proximity': 0,
+        'tiny_object': 0,
+        'invalid_bbox': 0
+    }
 
     for det in detections:
         # Require bbox and confidence
         if det.bbox is None or det.confidence is None:
             dropped += 1
+            dropped_reasons['invalid_bbox'] += 1
+            logger.debug(f"❌ Dropped detection: missing bbox or confidence", 
+                        detection=det.label, reason='invalid_bbox')
             continue
 
         if det.confidence < conf:
             dropped += 1
+            dropped_reasons['confidence'] += 1
+            logger.debug(f"❌ Dropped detection: confidence {det.confidence:.3f} < {conf}", 
+                        detection=det.label, confidence=det.confidence, reason='confidence')
             continue
 
         x1, y1, x2, y2 = det.bbox
@@ -51,6 +75,9 @@ def filter_bboxes(
         # Basic bbox validity
         if x2 <= x1 or y2 <= y1:
             dropped += 1
+            dropped_reasons['invalid_bbox'] += 1
+            logger.debug(f"❌ Dropped detection: invalid bbox dimensions", 
+                        detection=det.label, bbox=det.bbox, reason='invalid_bbox')
             continue
 
         w = float(x2 - x1)
@@ -62,16 +89,25 @@ def filter_bboxes(
 
         if rel_area < min_rel_area or rel_area > max_rel_area:
             dropped += 1
+            dropped_reasons['area'] += 1
+            logger.debug(f"❌ Dropped detection: area {rel_area:.4f} not in [{min_rel_area}, {max_rel_area}]", 
+                        detection=det.label, rel_area=rel_area, reason='area')
             continue
 
         if rel_area < tiny_rel:
             dropped += 1
+            dropped_reasons['tiny_object'] += 1
+            logger.debug(f"❌ Dropped detection: tiny object (area: {rel_area:.4f})", 
+                        detection=det.label, rel_area=rel_area, reason='tiny_object')
             continue
 
         # Aspect ratio (w/h)
         aspect = w / h if h > 0 else 0.0
         if aspect < min_aspect or aspect > max_aspect:
             dropped += 1
+            dropped_reasons['aspect_ratio'] += 1
+            logger.debug(f"❌ Dropped detection: aspect ratio {aspect:.2f} not in [{min_aspect}, {max_aspect}]", 
+                        detection=det.label, aspect_ratio=aspect, reason='aspect_ratio')
             continue
 
         # Edge margin: drop boxes too close to any border
@@ -80,9 +116,23 @@ def filter_bboxes(
             (img_w - x2) < edge_margin_px or (img_h - y2) < edge_margin_px
         ):
             dropped += 1
+            dropped_reasons['edge_proximity'] += 1
+            logger.debug(f"❌ Dropped detection: too close to edge (margin: {edge_margin_px}px)", 
+                        detection=det.label, bbox=det.bbox, reason='edge_proximity')
             continue
 
         kept.append(det)
+        logger.debug(f"✅ Kept detection: {det.label} (conf: {det.confidence:.3f}, area: {rel_area:.4f})", 
+                    detection=det.label, confidence=det.confidence, rel_area=rel_area)
+
+    # Log filtering results
+    logger.log_detection_stats(
+        total_detections=len(detections),
+        filtered_detections=len(kept),
+        dropped_detections=dropped,
+        dropped_reasons=dropped_reasons,
+        filter_ratio=len(kept) / len(detections) if detections else 0
+    )
 
     return kept, dropped
 
@@ -141,6 +191,9 @@ def crop_with_padding(
     Read image, expand bbox by relative padding, clamp to image bounds, and return
     (PIL.Image, (x1, y1, x2, y2)) where bbox is integers in pixel space.
     """
+    logger.debug(f"🖼️ Cropping image: {image_path.name}", 
+                image_path=str(image_path), bbox=bbox_xyxy, padding_ratio=pad_rel, out_size=out_size)
+    
     img = Image.open(image_path).convert("RGB")
     iw, ih = img.size
 
@@ -176,6 +229,11 @@ def crop_with_padding(
 
     if out_size is not None:
         crop = crop.resize(out_size, Image.BILINEAR)
+        logger.debug(f"🔄 Resized crop to {out_size}", 
+                    original_size=(ix2-ix1, iy2-iy1), new_size=out_size)
+
+    logger.debug(f"✅ Cropped successfully: {ix2-ix1}x{iy2-iy1} pixels", 
+                crop_size=(ix2-ix1, iy2-iy1), final_bbox=(ix1, iy1, ix2, iy2))
 
     return crop, (ix1, iy1, ix2, iy2)
 

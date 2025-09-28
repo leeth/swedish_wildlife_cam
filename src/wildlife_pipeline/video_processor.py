@@ -8,6 +8,10 @@ from dataclasses import dataclass
 import numpy as np
 
 from .detector import BaseDetector, Detection
+from .logging_config import get_logger
+
+# Initialize logger for video processing
+logger = get_logger("wildlife_pipeline.video_processor")
 
 @dataclass
 class VideoFrame:
@@ -22,22 +26,30 @@ class VideoProcessor:
     Process videos for wildlife detection by extracting frames and analyzing them.
     """
     
-    def __init__(self, detector: BaseDetector, frame_interval: int = 30, 
-                 max_frames: int = 100, temp_dir: Optional[Path] = None):
+    def __init__(self, detector: BaseDetector, frame_interval: int = None, 
+                 max_frames: int = 100, temp_dir: Optional[Path] = None, 
+                 sample_interval_seconds: float = 0.3):
         """
         Initialize video processor.
         
         Args:
             detector: Wildlife detector to use for frame analysis
-            frame_interval: Extract every Nth frame (default: every 30th frame = ~1 frame per second at 30fps)
+            frame_interval: Extract every Nth frame (deprecated, use sample_interval_seconds)
             max_frames: Maximum number of frames to extract per video
             temp_dir: Directory to store temporary frame images
+            sample_interval_seconds: Extract frames every N seconds (default: 0.3 seconds = ~3.33 FPS)
         """
         self.detector = detector
-        self.frame_interval = frame_interval
+        self.sample_interval_seconds = sample_interval_seconds
         self.max_frames = max_frames
         self.temp_dir = temp_dir or Path(tempfile.gettempdir()) / "wildlife_video_frames"
         self.temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Backward compatibility
+        if frame_interval is not None:
+            self.frame_interval = frame_interval
+        else:
+            self.frame_interval = None
     
     def process_video(self, video_path: Path) -> List[VideoFrame]:
         """
@@ -49,12 +61,16 @@ class VideoProcessor:
         Returns:
             List of VideoFrame objects with detections
         """
+        logger.log_stage_start("video_processing", video_path=str(video_path))
+        
         if not video_path.exists():
+            logger.error(f"Video file not found: {video_path}")
             raise FileNotFoundError(f"Video file not found: {video_path}")
         
         # Open video file
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
+            logger.error(f"Could not open video file: {video_path}")
             raise ValueError(f"Could not open video file: {video_path}")
         
         try:
@@ -63,23 +79,30 @@ class VideoProcessor:
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             duration = total_frames / fps if fps > 0 else 0
             
-            print(f"Processing video: {video_path.name}")
-            print(f"  Duration: {duration:.1f} seconds")
-            print(f"  FPS: {fps:.1f}")
-            print(f"  Total frames: {total_frames}")
-            print(f"  Extracting every {self.frame_interval}th frame")
+            logger.info(f"🎥 Processing video: {video_path.name}", 
+                       video_name=video_path.name, duration_seconds=duration, 
+                       fps=fps, total_frames=total_frames, 
+                       sample_interval=self.sample_interval_seconds)
             
             frames = []
             frame_count = 0
             extracted_count = 0
+            last_extracted_time = -self.sample_interval_seconds  # Allow first frame
             
             while True:
                 ret, frame = cap.read()
                 if not ret:
                     break
                 
-                # Extract frame at specified interval
-                if frame_count % self.frame_interval == 0 and extracted_count < self.max_frames:
+                current_time = frame_count / fps if fps > 0 else 0
+                
+                # Extract frame at specified time interval
+                should_extract = (
+                    (self.frame_interval is not None and frame_count % self.frame_interval == 0) or
+                    (self.frame_interval is None and current_time - last_extracted_time >= self.sample_interval_seconds)
+                ) and extracted_count < self.max_frames
+                
+                if should_extract:
                     timestamp = frame_count / fps if fps > 0 else 0
                     
                     # Save frame as temporary image
@@ -101,14 +124,26 @@ class VideoProcessor:
                     
                     frames.append(video_frame)
                     extracted_count += 1
+                    last_extracted_time = current_time
                     
-                    # Print progress
+                    # Log progress
                     if extracted_count % 10 == 0:
-                        print(f"  Extracted {extracted_count} frames...")
+                        logger.log_processing_progress(extracted_count, self.max_frames, "frames")
                 
                 frame_count += 1
             
-            print(f"  Completed: {len(frames)} frames analyzed")
+            # Log video processing results
+            detections_found = sum(len(frame.detections) for frame in frames)
+            logger.log_video_processing(
+                video_path=str(video_path),
+                frames_extracted=len(frames),
+                detections_found=detections_found,
+                duration_seconds=duration
+            )
+            
+            logger.log_stage_complete("video_processing", 
+                                    frames_extracted=len(frames), 
+                                    detections_found=detections_found)
             return frames
             
         finally:

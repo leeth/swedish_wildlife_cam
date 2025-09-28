@@ -10,6 +10,11 @@ import json
 
 from .config import CloudConfig
 from .interfaces import ManifestEntry, Stage2Entry
+from .stage3_reporting import Stage3Reporter
+from ..logging_config import get_logger
+
+# Initialize logger for cloud CLI
+logger = get_logger("wildlife_pipeline.cloud.cli")
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -51,6 +56,18 @@ def create_parser() -> argparse.ArgumentParser:
     materialize_parser.add_argument("--output", required=True, help="Output file (CSV/Parquet)")
     materialize_parser.add_argument("--format", choices=["csv", "parquet"], default="parquet")
     
+    # Stage-3 command
+    stage3_parser = subparsers.add_parser("stage3", help="Run Stage-3 reporting and compression")
+    stage3_parser.add_argument("--manifest", required=True, help="Stage-1 manifest file")
+    stage3_parser.add_argument("--predictions", required=True, help="Stage-2 predictions file")
+    stage3_parser.add_argument("--output", required=True, help="Output prefix")
+    stage3_parser.add_argument("--compression-window", type=int, default=10, 
+                              help="Compression window in minutes (default: 10)")
+    stage3_parser.add_argument("--min-confidence", type=float, default=0.5,
+                              help="Minimum confidence for observations (default: 0.5)")
+    stage3_parser.add_argument("--min-duration", type=float, default=5.0,
+                              help="Minimum duration in seconds (default: 5.0)")
+    
     # Status command
     status_parser = subparsers.add_parser("status", help="Check pipeline status")
     status_parser.add_argument("--output", required=True, help="Output prefix to check")
@@ -60,61 +77,75 @@ def create_parser() -> argparse.ArgumentParser:
 
 def run_stage1(args, config: CloudConfig) -> List[ManifestEntry]:
     """Run Stage-1 processing."""
-    print(f"Running Stage-1 with profile: {config.profile}")
+    logger.log_stage_start("stage1", profile=config.profile, input=args.input, output=args.output)
     
-    # Get configuration
-    stage1_config = config.get_stage1_config()
+    try:
+        # Get configuration
+        stage1_config = config.get_stage1_config()
+        
+        # Override with command line arguments
+        if args.model:
+            stage1_config['model'] = args.model
+        if args.conf_threshold:
+            stage1_config['conf_threshold'] = args.conf_threshold
+        if args.min_rel_area:
+            stage1_config['min_rel_area'] = args.min_rel_area
+        if args.max_rel_area:
+            stage1_config['max_rel_area'] = args.max_rel_area
+        if args.min_aspect:
+            stage1_config['min_aspect'] = args.min_aspect
+        if args.max_aspect:
+            stage1_config['max_aspect'] = args.max_aspect
+        if args.edge_margin:
+            stage1_config['edge_margin'] = args.edge_margin
+        if args.crop_padding:
+            stage1_config['crop_padding'] = args.crop_padding
     
-    # Override with command line arguments
-    if args.model:
-        stage1_config['model'] = args.model
-    if args.conf_threshold:
-        stage1_config['conf_threshold'] = args.conf_threshold
-    if args.min_rel_area:
-        stage1_config['min_rel_area'] = args.min_rel_area
-    if args.max_rel_area:
-        stage1_config['max_rel_area'] = args.max_rel_area
-    if args.min_aspect:
-        stage1_config['min_aspect'] = args.min_aspect
-    if args.max_aspect:
-        stage1_config['max_aspect'] = args.max_aspect
-    if args.edge_margin:
-        stage1_config['edge_margin'] = args.edge_margin
-    if args.crop_padding:
-        stage1_config['crop_padding'] = args.crop_padding
-    
-    # Run Stage-1
-    manifest_entries = config.runner.run_stage1(args.input, args.output, stage1_config)
-    
-    print(f"Stage-1 completed: {len(manifest_entries)} crops generated")
-    return manifest_entries
+        # Run Stage-1
+        manifest_entries = config.runner.run_stage1(args.input, args.output, stage1_config)
+        
+        logger.log_stage_complete("stage1", crops_generated=len(manifest_entries))
+        logger.info(f"✅ Stage-1 completed: {len(manifest_entries)} crops generated")
+        
+        return manifest_entries
+        
+    except Exception as e:
+        logger.log_stage_error("stage1", e, input=args.input, output=args.output)
+        raise
 
 
 def run_stage2(args, config: CloudConfig) -> List[Stage2Entry]:
     """Run Stage-2 processing."""
-    print(f"Running Stage-2 with profile: {config.profile}")
+    logger.log_stage_start("stage2", profile=config.profile, manifest=args.manifest, output=args.output)
     
-    # Load manifest entries
-    manifest_entries = load_manifest_entries(args.manifest, config)
+    try:
+        # Load manifest entries
+        manifest_entries = load_manifest_entries(args.manifest, config)
+        
+        if not manifest_entries:
+            logger.warning("No manifest entries found", manifest_path=args.manifest)
+            return []
+        
+        # Get configuration
+        stage2_config = config.get_stage2_config()
+        
+        # Override with command line arguments
+        if args.model:
+            stage2_config['model'] = args.model
+        if args.conf_threshold:
+            stage2_config['conf_threshold'] = args.conf_threshold
     
-    if not manifest_entries:
-        print("No manifest entries found")
-        return []
-    
-    # Get configuration
-    stage2_config = config.get_stage2_config()
-    
-    # Override with command line arguments
-    if args.model:
-        stage2_config['model'] = args.model
-    if args.conf_threshold:
-        stage2_config['conf_threshold'] = args.conf_threshold
-    
-    # Run Stage-2
-    stage2_entries = config.runner.run_stage2(manifest_entries, args.output, stage2_config)
-    
-    print(f"Stage-2 completed: {len(stage2_entries)} predictions generated")
-    return stage2_entries
+        # Run Stage-2
+        stage2_entries = config.runner.run_stage2(manifest_entries, args.output, stage2_config)
+        
+        logger.log_stage_complete("stage2", predictions_generated=len(stage2_entries))
+        logger.info(f"✅ Stage-2 completed: {len(stage2_entries)} predictions generated")
+        
+        return stage2_entries
+        
+    except Exception as e:
+        logger.log_stage_error("stage2", e, manifest=args.manifest, output=args.output)
+        raise
 
 
 def materialize_results(args, config: CloudConfig):
@@ -269,6 +300,68 @@ def check_status(args, config: CloudConfig):
         print(f"Stage-2 predictions: {len(predictions_entries)}")
 
 
+def run_stage3(args, config: CloudConfig) -> None:
+    """Run Stage-3 reporting and compression."""
+    logger.log_stage_start("stage3", profile=config.profile, 
+                          manifest=args.manifest, predictions=args.predictions, output=args.output)
+    
+    try:
+        # Load manifest entries
+        manifest_entries = load_manifest_entries(args.manifest, config)
+        logger.info(f"📋 Loaded {len(manifest_entries)} manifest entries")
+        
+        # Load Stage-2 predictions
+        predictions_entries = load_predictions_entries(args.predictions, config)
+        logger.info(f"🔮 Loaded {len(predictions_entries)} Stage-2 predictions")
+    
+    # Initialize Stage-3 reporter
+    reporter = Stage3Reporter(
+        compression_window_minutes=args.compression_window,
+        min_confidence=args.min_confidence,
+        min_duration_seconds=args.min_duration
+    )
+    
+    # Process Stage-2 results
+    print("Compressing observations...")
+    compressed_observations = reporter.process_stage2_results(predictions_entries, manifest_entries)
+    print(f"Compressed to {len(compressed_observations)} observations")
+    
+    # Generate report
+    report = reporter.generate_report(compressed_observations)
+    print(f"Generated report: {report['total_observations']} total observations")
+    
+    # Save results
+    output_prefix = args.output
+    if not output_prefix.endswith('/'):
+        output_prefix += '/'
+    
+    # Save compressed observations
+    observations_path = f"{output_prefix}stage3/compressed_observations.json"
+    reporter.save_compressed_observations(compressed_observations, Path(observations_path))
+    
+    # Save report
+    report_path = f"{output_prefix}stage3/report.json"
+    config.storage_adapter.put(
+        config.storage_adapter._create_location(report_path),
+        json.dumps(report, indent=2).encode('utf-8')
+    )
+    
+        logger.log_stage_complete("stage3", 
+                                compressed_observations=len(compressed_observations),
+                                species_detected=list(report['species_summary'].keys()),
+                                cameras=list(report['camera_summary'].keys()))
+        
+        logger.info(f"✅ Stage-3 completed:")
+        logger.info(f"  📊 Compressed observations: {observations_path}")
+        logger.info(f"  📈 Report: {report_path}")
+        logger.info(f"  🦌 Species detected: {list(report['species_summary'].keys())}")
+        logger.info(f"  📷 Cameras: {list(report['camera_summary'].keys())}")
+        
+    except Exception as e:
+        logger.log_stage_error("stage3", e, manifest=args.manifest, predictions=args.predictions, output=args.output)
+        raise
+
+
 def main():
     """Main CLI entry point."""
     parser = create_parser()
@@ -286,6 +379,8 @@ def main():
         run_stage1(args, config)
     elif args.command == "stage2":
         run_stage2(args, config)
+    elif args.command == "stage3":
+        run_stage3(args, config)
     elif args.command == "materialize":
         materialize_results(args, config)
     elif args.command == "status":
