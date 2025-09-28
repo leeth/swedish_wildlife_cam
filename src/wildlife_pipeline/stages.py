@@ -6,6 +6,7 @@ from PIL import Image
 
 from .detector import Detection
 from .logging_config import get_logger
+from .image_loader import ImageLoader, create_image_loader
 
 # Initialize logger for stages
 logger = get_logger("wildlife_pipeline.stages")
@@ -194,7 +195,11 @@ def crop_with_padding(
     logger.debug(f"🖼️ Cropping image: {image_path.name}", 
                 image_path=str(image_path), bbox=bbox_xyxy, padding_ratio=pad_rel, out_size=out_size)
     
-    img = Image.open(image_path).convert("RGB")
+    # Use image loader abstraction
+    if image_loader is None:
+        image_loader = create_image_loader("local")
+    
+    img = image_loader.load_image(image_path)
     iw, ih = img.size
 
     x1, y1, x2, y2 = bbox_xyxy

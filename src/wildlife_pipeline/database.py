@@ -9,14 +9,16 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import json
 
+from .database_adapter import DatabaseAdapter, SQLiteAdapter
+
 
 class WildlifeDatabase:
     """SQLite database for storing wildlife detection results."""
     
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path, database_adapter: Optional[DatabaseAdapter] = None):
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._init_database()
+        self.database_adapter = database_adapter or SQLiteAdapter(db_path)
     
     def _init_database(self):
         """Initialize the database with required tables."""
@@ -72,54 +74,7 @@ class WildlifeDatabase:
     
     def insert_detection(self, detection_data: Dict[str, Any]) -> int:
         """Insert a detection record and return the detection ID."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            
-            # Insert main detection record
-            cursor.execute("""
-                INSERT INTO detections (
-                    file_path, file_type, camera_id, timestamp, latitude, longitude,
-                    image_width, image_height, stage1_dropped, manual_review_count,
-                    observations_stage2, video_source, frame_number, frame_timestamp
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                detection_data.get('file_path'),
-                detection_data.get('file_type', 'image'),
-                detection_data.get('camera_id'),
-                detection_data.get('timestamp'),
-                detection_data.get('latitude'),
-                detection_data.get('longitude'),
-                detection_data.get('image_width'),
-                detection_data.get('image_height'),
-                detection_data.get('stage1_dropped', 0),
-                detection_data.get('manual_review_count', 0),
-                detection_data.get('observations_stage2'),
-                detection_data.get('video_source'),
-                detection_data.get('frame_number'),
-                detection_data.get('frame_timestamp')
-            ))
-            
-            detection_id = cursor.lastrowid
-            
-            # Insert individual detection results
-            for result in detection_data.get('detection_results', []):
-                cursor.execute("""
-                    INSERT INTO detection_results (
-                        detection_id, label, confidence, bbox_x1, bbox_y1, bbox_x2, bbox_y2, stage
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    detection_id,
-                    result.get('label'),
-                    result.get('confidence'),
-                    result.get('bbox', {}).get('x1', 0),
-                    result.get('bbox', {}).get('y1', 0),
-                    result.get('bbox', {}).get('x2', 0),
-                    result.get('bbox', {}).get('y2', 0),
-                    result.get('stage', 1)
-                ))
-            
-            conn.commit()
-            return detection_id
+        return self.database_adapter.insert_detection(detection_data)
     
     def get_detections_by_camera(self, camera_id: str) -> List[Dict[str, Any]]:
         """Get all detections for a specific camera."""
@@ -198,41 +153,7 @@ class WildlifeDatabase:
     
     def get_summary_stats(self) -> Dict[str, Any]:
         """Get summary statistics from the database."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            
-            # Total detections
-            cursor.execute("SELECT COUNT(*) FROM detections")
-            total_detections = cursor.fetchone()[0]
-            
-            # Detections with GPS
-            cursor.execute("SELECT COUNT(*) FROM detections WHERE latitude IS NOT NULL AND longitude IS NOT NULL")
-            gps_detections = cursor.fetchone()[0]
-            
-            # Species counts
-            cursor.execute("""
-                SELECT label, COUNT(*) as count 
-                FROM detection_results 
-                GROUP BY label 
-                ORDER BY count DESC
-            """)
-            species_counts = dict(cursor.fetchall())
-            
-            # Camera counts
-            cursor.execute("""
-                SELECT camera_id, COUNT(*) as count 
-                FROM detections 
-                GROUP BY camera_id 
-                ORDER BY count DESC
-            """)
-            camera_counts = dict(cursor.fetchall())
-            
-            return {
-                'total_detections': total_detections,
-                'gps_detections': gps_detections,
-                'species_counts': species_counts,
-                'camera_counts': camera_counts
-            }
+        return self.database_adapter.get_summary_stats()
     
     def export_to_csv(self, output_path: Path):
         """Export all detections to CSV format."""

@@ -12,11 +12,7 @@ from datetime import datetime, timedelta
 import json
 from pathlib import Path
 
-from .interfaces import Stage2Entry, ManifestEntry
-from ..logging_config import get_logger
-
-# Initialize logger for Stage 3 reporting
-logger = get_logger("wildlife_pipeline.stage3_reporting")
+from .cloud.interfaces import Stage2Entry, ManifestEntry
 
 
 @dataclass
@@ -70,52 +66,22 @@ class Stage3Reporter:
         Returns:
             List of compressed observations
         """
-        logger.log_stage_start("stage3_reporting", 
-                              stage2_entries=len(stage2_entries), 
-                              manifest_entries=len(manifest_entries),
-                              compression_window_minutes=self.compression_window.total_seconds() / 60,
-                              min_confidence=self.min_confidence,
-                              min_duration_seconds=self.min_duration_seconds)
-        
         # Group entries by camera and species
         grouped_observations = self._group_observations_by_camera_species(
             stage2_entries, manifest_entries
         )
         
-        logger.info(f"📊 Grouped observations: {len(grouped_observations)} camera-species combinations", 
-                   grouped_count=len(grouped_observations))
-        
         # Compress observations within time windows
         compressed_observations = []
         
         for (camera_id, species), observations in grouped_observations.items():
-            logger.debug(f"🔄 Compressing {len(observations)} observations for {camera_id}-{species}", 
-                       camera_id=camera_id, species=species, observation_count=len(observations))
-            
             compressed = self._compress_observations_for_species(
                 camera_id, species, observations
             )
             compressed_observations.extend(compressed)
-            
-            logger.debug(f"✅ Compressed to {len(compressed)} observations", 
-                        camera_id=camera_id, species=species, compressed_count=len(compressed))
         
         # Sort by start time
         compressed_observations.sort(key=lambda x: x.start_time)
-        
-        # Log compression statistics
-        original_count = len(stage2_entries)
-        compressed_count = len(compressed_observations)
-        compression_ratio = original_count / compressed_count if compressed_count > 0 else 0
-        
-        logger.log_compression_stats(
-            original_count=original_count,
-            compressed_count=compressed_count,
-            compression_ratio=compression_ratio
-        )
-        
-        logger.log_stage_complete("stage3_reporting", 
-                                compressed_observations=len(compressed_observations))
         
         return compressed_observations
     
@@ -249,7 +215,7 @@ class Stage3Reporter:
             timeline.append({
                 'timestamp': frame['timestamp'].isoformat(),
                 'confidence': frame['confidence'],
-                'frame_number': frame.get('frame_number'),
+                'frame_number': frame['frame_number'],
                 'crop_path': frame['crop_path']
             })
         
@@ -381,15 +347,7 @@ class Stage3Reporter:
                 'needs_review': obs.needs_review
             })
         
-        # Use storage adapter for file operations
-        if hasattr(self, 'storage_adapter') and self.storage_adapter:
-            from .interfaces import StorageLocation
-            location = StorageLocation.from_url(str(output_path))
-            content = json.dumps(serializable_observations, indent=2)
-            self.storage_adapter.put(location, content.encode('utf-8'))
-        else:
-            # Fallback to direct file I/O
-            with open(output_path, 'w') as f:
-                json.dump(serializable_observations, f, indent=2)
+        with open(output_path, 'w') as f:
+            json.dump(serializable_observations, f, indent=2)
         
         print(f"Saved {len(compressed_observations)} compressed observations to {output_path}")

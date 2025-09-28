@@ -7,6 +7,7 @@ import os
 from urllib.parse import urlparse
 
 from .detector import BaseDetector, Detection
+from .http_client import HttpClient, create_http_client
 
 class SwedishWildlifeDetector(BaseDetector):
     """
@@ -44,7 +45,8 @@ class SwedishWildlifeDetector(BaseDetector):
     }
     
     def __init__(self, model_path: str = None, conf: float = 0.35, 
-                 api_url: str = None, api_key: str = None):
+                 api_url: str = None, api_key: str = None,
+                 http_client: Optional[HttpClient] = None):
         """
         Initialize MegaDetector.
         
@@ -59,6 +61,7 @@ class SwedishWildlifeDetector(BaseDetector):
         self.api_url = api_url
         self.api_key = api_key
         self.model = None
+        self.http_client = http_client or create_http_client("retry")
         
         if model_path:
             self._load_local_model()
@@ -148,10 +151,12 @@ class SwedishWildlifeDetector(BaseDetector):
                 if self.api_key:
                     headers['Authorization'] = f'Bearer {self.api_key}'
                 
-                response = requests.post(self.api_url, files=files, headers=headers)
-                response.raise_for_status()
-                
-                results = response.json()
+                # Use http_client abstraction with retry logic
+                results = self.http_client.post(
+                    self.api_url, 
+                    files=files, 
+                    headers=headers
+                )
                 return self._convert_api_results(results)
                 
         except Exception as e:

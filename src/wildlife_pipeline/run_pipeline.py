@@ -10,6 +10,11 @@ from .config import PipelineConfig
 from .metadata import extract_exif, best_timestamp, infer_camera_id, get_gps_from_exif
 from .database import WildlifeDatabase
 from .ingest import iter_images
+from .database_adapter import create_database_adapter
+from .image_loader import create_image_loader
+from .http_client import create_http_client
+from .idempotency import create_idempotency_manager, generate_operation_id
+from .error_handler import retry_on_error, create_error_handler
 from .video_processor import VideoProcessor, iter_videos
 from .detector import YOLODetector, BaseDetector, Detection
 from .wildlife_detector import WildlifeDetector
@@ -22,10 +27,13 @@ def build_detector(cfg: PipelineConfig) -> BaseDetector:
     if not cfg.model_path:
         raise SystemExit("No model path provided. Use --model <path/to/model.pt>")
     
+    # Create HTTP client for API-based detectors
+    http_client = create_http_client("retry", max_retries=3)
+    
     # Check if using Swedish Wildlife Detector
     if cfg.model_path.lower() in ['megadetector', 'md', 'mega', 'swedish']:
         print("Using Swedish Wildlife Detector for Swedish wildlife detection...")
-        return SwedishWildlifeDetector(conf=cfg.conf_thres)
+        return SwedishWildlifeDetector(conf=cfg.conf_thres, http_client=http_client)
     
     # Use WildlifeDetector for better wildlife classification with YOLO models
     return WildlifeDetector(cfg.model_path, conf=cfg.conf_thres, iou=cfg.iou_thres)
@@ -92,6 +100,8 @@ def main():
     ap.add_argument("--stage2", type=str, default=None, help="Enable stage-2 classifier. Options: 'yolo_cls'")
     ap.add_argument("--stage2-weights", type=str, default=None, help="Weights for stage-2 classifier (e.g., yolov8n-cls.pt)")
     ap.add_argument("--stage2-conf", type=float, default=0.5, help="Confidence for stage-2 classifier")
+    ap.add_argument("--idempotency", action="store_true", help="Enable idempotency checks")
+    ap.add_argument("--state-dir", default="./state", help="Directory for idempotency state")
     args = ap.parse_args()
 
     cfg = PipelineConfig(
@@ -102,6 +112,27 @@ def main():
         iou_thres=args.iou_thres,
         write_format=args.write,
     )
+    
+    # Initialize idempotency manager if enabled
+    idempotency_manager = None
+    if args.idempotency:
+        idempotency_manager = create_idempotency_manager("file", state_dir=Path(args.state_dir))
+        operation_id = generate_operation_id("pipeline", {
+            "input": str(cfg.input_root),
+            "output": str(cfg.output_path),
+            "model": cfg.model_path
+        })
+        
+        # Check if operation already completed
+        from .idempotency import OperationStatus
+        if idempotency_manager.get_operation_status(operation_id) == OperationStatus.COMPLETED:
+            print(f"Operation {operation_id} already completed, skipping...")
+            return
+        
+        # Start operation
+        if not idempotency_manager.start_operation(operation_id, "pipeline", "input_hash"):
+            print(f"Operation {operation_id} already in progress, skipping...")
+            return
 
     det = build_detector(cfg)
 
@@ -368,8 +399,9 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
 
     if cfg.write_format == "sqlite" or out.suffix.lower() == ".db":
-        # Use SQLite database
-        db = WildlifeDatabase(out)
+        # Use SQLite database with abstraction
+        db_adapter = create_database_adapter("sqlite", db_path=out)
+        db = WildlifeDatabase(out, database_adapter=db_adapter)
         
         for row in rows:
             # Convert row to database format
@@ -413,6 +445,15 @@ def main():
         df.to_csv(out, index=False)
 
     print(f"Wrote {len(df)} rows to {out}")
+    
+    # Complete idempotency operation if enabled
+    if idempotency_manager:
+        idempotency_manager.complete_operation(operation_id, {
+            "total_rows": len(rows),
+            "output_path": str(cfg.output_path),
+            "timestamp": str(pd.Timestamp.now())
+        })
+        print(f"Operation {operation_id} completed successfully")
 
 if __name__ == "__main__":
     main()

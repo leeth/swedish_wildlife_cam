@@ -313,39 +313,39 @@ def run_stage3(args, config: CloudConfig) -> None:
         # Load Stage-2 predictions
         predictions_entries = load_predictions_entries(args.predictions, config)
         logger.info(f"🔮 Loaded {len(predictions_entries)} Stage-2 predictions")
-    
-    # Initialize Stage-3 reporter
-    reporter = Stage3Reporter(
-        compression_window_minutes=args.compression_window,
-        min_confidence=args.min_confidence,
-        min_duration_seconds=args.min_duration
-    )
-    
-    # Process Stage-2 results
-    print("Compressing observations...")
-    compressed_observations = reporter.process_stage2_results(predictions_entries, manifest_entries)
-    print(f"Compressed to {len(compressed_observations)} observations")
-    
-    # Generate report
-    report = reporter.generate_report(compressed_observations)
-    print(f"Generated report: {report['total_observations']} total observations")
-    
-    # Save results
-    output_prefix = args.output
-    if not output_prefix.endswith('/'):
-        output_prefix += '/'
-    
-    # Save compressed observations
-    observations_path = f"{output_prefix}stage3/compressed_observations.json"
-    reporter.save_compressed_observations(compressed_observations, Path(observations_path))
-    
-    # Save report
-    report_path = f"{output_prefix}stage3/report.json"
-    config.storage_adapter.put(
-        config.storage_adapter._create_location(report_path),
-        json.dumps(report, indent=2).encode('utf-8')
-    )
-    
+        
+        # Initialize Stage-3 reporter
+        reporter = Stage3Reporter(
+            compression_window_minutes=args.compression_window,
+            min_confidence=args.min_confidence,
+            min_duration_seconds=args.min_duration
+        )
+        
+        # Process Stage-2 results
+        print("Compressing observations...")
+        compressed_observations = reporter.process_stage2_results(predictions_entries, manifest_entries)
+        print(f"Compressed to {len(compressed_observations)} observations")
+        
+        # Generate report
+        report = reporter.generate_report(compressed_observations)
+        print(f"Generated report: {report['total_observations']} total observations")
+        
+        # Save results
+        output_prefix = args.output
+        if not output_prefix.endswith('/'):
+            output_prefix += '/'
+        
+        # Save compressed observations
+        observations_path = f"{output_prefix}stage3/compressed_observations.json"
+        reporter.save_compressed_observations(compressed_observations, Path(observations_path))
+        
+        # Save report
+        report_path = f"{output_prefix}stage3/report.json"
+        config.storage_adapter.put(
+            config.storage_adapter._create_location(report_path),
+            json.dumps(report, indent=2).encode('utf-8')
+        )
+        
         logger.log_stage_complete("stage3", 
                                 compressed_observations=len(compressed_observations),
                                 species_detected=list(report['species_summary'].keys()),
@@ -355,10 +355,9 @@ def run_stage3(args, config: CloudConfig) -> None:
         logger.info(f"  📊 Compressed observations: {observations_path}")
         logger.info(f"  📈 Report: {report_path}")
         logger.info(f"  🦌 Species detected: {list(report['species_summary'].keys())}")
-        logger.info(f"  📷 Cameras: {list(report['camera_summary'].keys())}")
-        
+    
     except Exception as e:
-        logger.log_stage_error("stage3", e, manifest=args.manifest, predictions=args.predictions, output=args.output)
+        logger.log_stage_error("stage3", error=str(e), operation="compression")
         raise
 
 
