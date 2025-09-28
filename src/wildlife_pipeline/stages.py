@@ -1,125 +1,182 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict
+from typing import List, Tuple, Optional
 from pathlib import Path
+
+from PIL import Image
 
 from .detector import Detection
 
 
-@dataclass
-class StageOneResult:
-    """Result of Stage 1 filtering.
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
 
-    true_positives: Detections believed to be real objects of interest
-    false_positives: Detections filtered out as likely spurious
+
+def filter_bboxes(
+    detections: List[Detection],
+    img_w: int,
+    img_h: int,
+    conf: float,
+    min_rel_area: float,
+    max_rel_area: float,
+    min_aspect: float,
+    max_aspect: float,
+    edge_margin_px: int,
+    tiny_rel: float = 0.01,
+) -> Tuple[List[Detection], int]:
     """
-    true_positives: List[Detection]
-    false_positives: List[Detection]
+    Filter detections by confidence, relative area, aspect ratio and edge proximity.
 
-
-class StageOneFalsePositiveFilter:
+    Returns (filtered_detections, dropped_count).
     """
-    Stage 1: Filter obvious false positives using simple heuristics.
+    if not detections:
+        return [], 0
 
-    Heuristics:
-    - Confidence lower than `min_confidence` → false positive
-    - Extremely small boxes relative to image (if width/height given) could be filtered
-      (not applied here since we do not have image size context in Detection)
+    image_area: float = float(max(1, img_w) * max(1, img_h))
+
+    kept: List[Detection] = []
+    dropped: int = 0
+
+    for det in detections:
+        # Require bbox and confidence
+        if det.bbox is None or det.confidence is None:
+            dropped += 1
+            continue
+
+        if det.confidence < conf:
+            dropped += 1
+            continue
+
+        x1, y1, x2, y2 = det.bbox
+
+        # Basic bbox validity
+        if x2 <= x1 or y2 <= y1:
+            dropped += 1
+            continue
+
+        w = float(x2 - x1)
+        h = float(y2 - y1)
+
+        # Relative area and tiny-box check
+        box_area = w * h
+        rel_area = box_area / image_area if image_area > 0 else 0.0
+
+        if rel_area < min_rel_area or rel_area > max_rel_area:
+            dropped += 1
+            continue
+
+        if rel_area < tiny_rel:
+            dropped += 1
+            continue
+
+        # Aspect ratio (w/h)
+        aspect = w / h if h > 0 else 0.0
+        if aspect < min_aspect or aspect > max_aspect:
+            dropped += 1
+            continue
+
+        # Edge margin: drop boxes too close to any border
+        if (
+            x1 < edge_margin_px or y1 < edge_margin_px or
+            (img_w - x2) < edge_margin_px or (img_h - y2) < edge_margin_px
+        ):
+            dropped += 1
+            continue
+
+        kept.append(det)
+
+    return kept, dropped
+
+
+def is_doubtful(
+    det: Detection,
+    img_w: int,
+    img_h: int,
+    conf_threshold: float,
+    edge_margin_px: int,
+    tiny_rel: float = 0.01,
+    min_rel_area: float = 0.003,
+    doubt_conf_margin: float = 0.05,
+) -> bool:
     """
-
-    def __init__(self, min_confidence: float = 0.25):
-        self.min_confidence = min_confidence
-
-    def run(self, detections: List[Detection]) -> StageOneResult:
-        true_positives: List[Detection] = []
-        false_positives: List[Detection] = []
-        for det in detections:
-            if det.confidence >= self.min_confidence:
-                true_positives.append(det)
-            else:
-                false_positives.append(det)
-        return StageOneResult(true_positives=true_positives, false_positives=false_positives)
-
-
-@dataclass
-class StageTwoResult:
-    """Result of Stage 2 categorization into human vs animal and species mapping."""
-    humans: List[Detection]
-    animals: List[Detection]
-    species_counts: Dict[str, int]
-
-
-class StageTwoHumanAnimalAndSpecies:
+    Heuristic to mark detections for manual review before Stage-2.
+    Doubt criteria:
+      - confidence within [conf_threshold, conf_threshold + doubt_conf_margin)
+      - box too close to image edges (within edge_margin_px)
+      - very small relative area (< tiny_rel) or just above min_rel_area
     """
-    Stage 2: Split detections into human vs animal and map to species where possible.
+    if det.bbox is None or det.confidence is None:
+        return True
 
-    This uses label-name heuristics so it works with both generic YOLO labels and
-    the custom wildlife mappings already done upstream. If a label matches a known
-    species name, it is treated as an animal with that species. If it matches a
-    human synonym, it is treated as human. Otherwise, it's ignored for species.
+    x1, y1, x2, y2 = det.bbox
+    if x2 <= x1 or y2 <= y1 or img_w <= 0 or img_h <= 0:
+        return True
+
+    # Near-threshold confidence
+    if conf_threshold <= det.confidence < (conf_threshold + doubt_conf_margin):
+        return True
+
+    # Edge proximity
+    if (
+        x1 < edge_margin_px or y1 < edge_margin_px or
+        (img_w - x2) < edge_margin_px or (img_h - y2) < edge_margin_px
+    ):
+        return True
+
+    # Relative area checks
+    w = float(x2 - x1)
+    h = float(y2 - y1)
+    rel_area = (w * h) / float(max(1, img_w * img_h))
+    if rel_area < tiny_rel or (min_rel_area <= rel_area < (min_rel_area * 1.5)):
+        return True
+
+    return False
+
+def crop_with_padding(
+    image_path: Path,
+    bbox_xyxy: Tuple[float, float, float, float],
+    pad_rel: float = 0.15,
+    out_size: Optional[Tuple[int, int]] = None,
+):
     """
+    Read image, expand bbox by relative padding, clamp to image bounds, and return
+    (PIL.Image, (x1, y1, x2, y2)) where bbox is integers in pixel space.
+    """
+    img = Image.open(image_path).convert("RGB")
+    iw, ih = img.size
 
-    HUMAN_LABELS = {"person", "human", "people"}
-    GENERIC_ANIMAL_LABELS = {"animal"}
+    x1, y1, x2, y2 = bbox_xyxy
+    # Ensure numbers
+    x1 = float(x1); y1 = float(y1); x2 = float(x2); y2 = float(y2)
 
-    # Accepted wildlife species keywords (lowercase) → canonical species name
-    SPECIES_MAP = {
-        "moose": "moose",
-        "elk": "moose",
-        "boar": "boar",
-        "wild_boar": "boar",
-        "wildboar": "boar",
-        "roedeer": "roedeer",
-        "roe_deer": "roedeer",
-        "red_deer": "red_deer",
-        "fallow_deer": "fallow_deer",
-        "bear": "bear",
-        "wolf": "wolf",
-        "lynx": "lynx",
-        "fox": "fox",
-        "badger": "badger",
-        "hare": "hare",
-        "rabbit": "rabbit",
-        # Common misclassifications mapped to nearest target
-        "deer": "roedeer",
-        "horse": "moose",
-        "cow": "moose",
-        "sheep": "roedeer",
-        "dog": "boar",
-        "elephant": "boar",
-        "cat": "fox",
-        "kitten": "fox",
-        "marten": "badger",
-        "weasel": "badger",
-    }
+    w = max(1.0, x2 - x1)
+    h = max(1.0, y2 - y1)
 
-    def _canonical_species(self, label: str) -> Optional[str]:
-        l = label.lower().replace(" ", "_")
-        if l in self.SPECIES_MAP:
-            return self.SPECIES_MAP[l]
-        # partial match fallback
-        for key, value in self.SPECIES_MAP.items():
-            if key in l:
-                return value
-        return None
+    # Padding relative to bbox size
+    pad_w = w * pad_rel
+    pad_h = h * pad_rel
 
-    def run(self, detections: List[Detection]) -> StageTwoResult:
-        humans: List[Detection] = []
-        animals: List[Detection] = []
-        species_counts: Dict[str, int] = {}
+    px1 = _clamp(x1 - pad_w, 0.0, float(iw))
+    py1 = _clamp(y1 - pad_h, 0.0, float(ih))
+    px2 = _clamp(x2 + pad_w, 0.0, float(iw))
+    py2 = _clamp(y2 + pad_h, 0.0, float(ih))
 
-        for det in detections:
-            label = det.label.lower()
-            if label in self.HUMAN_LABELS:
-                humans.append(det)
-                continue
+    # Convert to int box for cropping
+    ix1 = int(round(px1))
+    iy1 = int(round(py1))
+    ix2 = int(round(px2))
+    iy2 = int(round(py2))
 
-            species = self._canonical_species(det.label)
-            if species is not None or label in self.GENERIC_ANIMAL_LABELS:
-                animals.append(det)
-                if species is not None:
-                    species_counts[species] = species_counts.get(species, 0) + 1
+    # Safety to avoid zero-sized crop
+    if ix2 <= ix1:
+        ix2 = min(iw, ix1 + 1)
+    if iy2 <= iy1:
+        iy2 = min(ih, iy1 + 1)
 
-        return StageTwoResult(humans=humans, animals=animals, species_counts=species_counts)
+    crop = img.crop((ix1, iy1, ix2, iy2))
+
+    if out_size is not None:
+        crop = crop.resize(out_size, Image.BILINEAR)
+
+    return crop, (ix1, iy1, ix2, iy2)
 
 

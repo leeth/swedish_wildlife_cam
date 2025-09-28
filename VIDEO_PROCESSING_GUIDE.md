@@ -189,3 +189,4 @@ done
 ```
 
 The video processing feature makes it easy to analyze camera trap videos and extract valuable wildlife detection data from your video recordings!
+
