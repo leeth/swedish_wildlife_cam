@@ -241,19 +241,8 @@ class SwedishWildlifeDetector(BaseDetector):
         """Map detected categories to Swedish wildlife species"""
         category_lower = category.lower()
         
-        # Direct mapping
-        if category_lower in self.SWEDISH_WILDLIFE:
-            return self.SWEDISH_WILDLIFE[category_lower]
-        
-        if category_lower in self.SWEDISH_ANIMALS:
-            return self.SWEDISH_ANIMALS[category_lower]
-        
-        # Handle generic 'animal' category
-        if category_lower == 'animal':
-            return 'animal'  # Keep as generic animal
-        
-        # Map common COCO misclassifications to Swedish wildlife
-        # Based on what we're seeing in the results
+        # Map common COCO misclassifications to Swedish wildlife FIRST
+        # so these corrections take precedence over direct animal labels
         mappings = {
             'deer': 'roedeer',
             'elk': 'moose',
@@ -276,8 +265,17 @@ class SwedishWildlifeDetector(BaseDetector):
             'weasel': 'badger',  # Badgers sometimes misclassified as weasels
             'meles_meles': 'badger',  # Scientific name
         }
-        
-        return mappings.get(category_lower)
+        if category_lower in mappings:
+            return mappings[category_lower]
+
+        # Then apply direct/known mappings
+        if category_lower in self.SWEDISH_WILDLIFE:
+            return self.SWEDISH_WILDLIFE[category_lower]
+        if category_lower in self.SWEDISH_ANIMALS:
+            return self.SWEDISH_ANIMALS[category_lower]
+        if category_lower == 'animal':
+            return 'animal'
+        return None
     
     def get_available_classes(self) -> List[str]:
         """Get list of available Swedish wildlife classes"""
