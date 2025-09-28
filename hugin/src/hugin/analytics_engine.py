@@ -26,7 +26,7 @@ except ImportError as e:
 
 from .data_contracts import ObservationRecord, CompressedObservation, CameraInfo
 from .logging_config import get_logger
-from .cluster_service import ClusterService
+from .efficient_cluster_lookup import EfficientClusterLookup
 
 logger = get_logger("wildlife_pipeline.analytics_engine")
 
@@ -34,11 +34,11 @@ logger = get_logger("wildlife_pipeline.analytics_engine")
 class AnalyticsEngine:
     """High-performance analytics engine using Polars."""
     
-    def __init__(self, cache_dir: Optional[str] = None, cluster_service: Optional[ClusterService] = None):
+    def __init__(self, cache_dir: Optional[str] = None, cluster_lookup: Optional[EfficientClusterLookup] = None):
         self.cache_dir = Path(cache_dir) if cache_dir else Path.home() / ".wildlife_cache" / "analytics"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.logger = logger
-        self.cluster_service = cluster_service
+        self.cluster_lookup = cluster_lookup
         
         # Configure Polars for optimal performance
         pl.Config.set_streaming_chunk_size(8192)

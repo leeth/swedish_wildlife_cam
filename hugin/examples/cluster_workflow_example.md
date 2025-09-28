@@ -1,141 +1,143 @@
 # GPS Cluster Workflow Example
 
-Dette eksempel viser hvordan man bruger GPS cluster systemet til at gruppere wildlife camera lokationer.
+Dette eksempel viser hvordan du bruger GPS cluster funktionaliteten i Hugin.
 
-## 1. Process Observations
+## 🚀 Hurtig Start
 
-Først processer vi observations for at oprette clusters:
+### 1. **Process Observations**
+```bash
+# Process observations og opret clusters
+python -m hugin.cluster_cli process sample_observations.yaml results.json --radius 5.0
+```
+
+### 2. **Request Unknown Clusters**
+```bash
+# Vis unknown clusters der skal navngives
+python -m hugin.cluster_cli request-unknown --limit 20
+```
+
+### 3. **Submit Cluster Names**
+```bash
+# Submit cluster names fra YAML fil
+python -m hugin.cluster_cli submit-names cluster_names.yaml
+```
+
+### 4. **Export Boundaries**
+```bash
+# Export cluster boundaries til mapping
+python -m hugin.cluster_cli export-boundaries boundaries.geojson --format geojson
+```
+
+### 5. **Show Analytics**
+```bash
+# Vis cluster analytics
+python -m hugin.cluster_cli analytics
+```
+
+## 📊 Workflow Steps
+
+### **Step 1: Process Observations**
+```yaml
+# sample_observations.yaml
+observations:
+  - observation_id: "obs_001"
+    latitude: 59.3293
+    longitude: 18.0686
+    timestamp: "2024-01-15T10:30:00Z"
+    species: "moose"
+    confidence: 0.85
+```
+
+### **Step 2: Request Unknown Clusters**
+```bash
+python -m hugin.cluster_cli request-unknown --limit 20
+```
+
+Output:
+```
+❓ Found 3 unknown clusters:
+  1. cluster_001 - 15 points
+     Center: 59.3294, 18.0687
+  2. cluster_002 - 8 points
+     Center: 59.3401, 18.0801
+  3. cluster_003 - 12 points
+     Center: 59.3500, 18.0900
+```
+
+### **Step 3: Submit Cluster Names**
+```yaml
+# cluster_names.yaml
+cluster_names:
+  cluster_001: "North Forest"
+  cluster_002: "South Meadow"
+  cluster_003: "East Lake"
+```
 
 ```bash
-# Process observations fra YAML fil
-python -m hugin.cluster_cli process examples/sample_observations.yaml --output results.json
-
-# Eller fra JSON fil
-python -m hugin.cluster_cli process data/observations.json --output results.json
+python -m hugin.cluster_cli submit-names cluster_names.yaml
 ```
 
-## 2. List Clusters
-
-Se alle clusters:
-
+### **Step 4: Export Boundaries**
 ```bash
-# List alle clusters
-python -m hugin.cluster_cli list
-
-# List kun navngivne clusters
-python -m hugin.cluster_cli list --named-only
+python -m hugin.cluster_cli export-boundaries boundaries.geojson --format geojson
 ```
 
-## 3. Find Unknown Clusters
-
-Find clusters der mangler navn:
-
+### **Step 5: Show Analytics**
 ```bash
-# Find unknown clusters
-python -m hugin.cluster_cli unknown --limit 20
+python -m hugin.cluster_cli analytics
 ```
 
-## 4. Name Clusters
-
-Navngiv unknown clusters:
-
-```bash
-# Name en cluster
-python -m hugin.cluster_cli name cluster_123 "Deer Feeding Area" --description "Main deer feeding location"
-
-# Name flere clusters
-python -m hugin.cluster_cli name cluster_456 "Fox Den" --description "Red fox denning area"
+Output:
 ```
-
-## 5. Get Cluster Details
-
-Se detaljer om en specifik cluster:
-
-```bash
-# Get cluster details
-python -m hugin.cluster_cli details cluster_123
-
-# Get cluster boundary for mapping
-python -m hugin.cluster_cli boundary cluster_123
-```
-
-## 6. Export for Mapping
-
-Export clusters til mapping formater:
-
-```bash
-# Export alle formater
-python -m hugin.cluster_cli export exports/
-
-# Export specifikke formater
-python -m hugin.cluster_cli export exports/ --formats geojson kml
-```
-
-## 7. Search Clusters
-
-Søg efter clusters nær en lokation:
-
-```bash
-# Search within 100m
-python -m hugin.cluster_cli search 55.6761 12.5683 --radius 100
-
-# Search within 50m
-python -m hugin.cluster_cli search 55.6761 12.5683 --radius 50
-```
-
-## 8. Statistics
-
-Se cluster statistikker:
-
-```bash
-python -m hugin.cluster_cli stats
-```
-
-## YAML Configuration
-
-Brug en custom konfiguration:
-
-```bash
-# Med custom config
-python -m hugin.cluster_cli --config my_config.yaml process observations.yaml
-```
-
-## Eksempel Output
-
-### Process Results
-```
-Processed 8 observations
-Created 3 new clusters
-```
-
-### List Clusters
-```
-Found 3 clusters:
-  cluster_123 - Deer Feeding Area (Named) - 3 points
-  cluster_456 - Fox Den (Named) - 2 points  
-  cluster_789 - Unnamed (Unknown) - 2 points
-```
-
-### Unknown Clusters
-```
-Found 1 unknown clusters:
-  cluster_789 - 2 points at (55.6900, 12.5800)
-```
-
-### Statistics
-```
-📊 Cluster Statistics:
+📊 Cluster Analytics:
   Total clusters: 3
-  Named clusters: 2
-  Unknown clusters: 1
-  Total assignments: 8
-  Average points per cluster: 2.7
-  Naming rate: 66.7%
+  Named clusters: 3
+  Unnamed clusters: 0
+  Total points: 35
+  Average points per cluster: 11.7
 ```
 
-## Export Formats
+## 🔧 Configuration
 
-### GeoJSON
+### **cluster_config.yaml**
+```yaml
+# Database settings
+db_path: "clusters.db"
+
+# Clustering parameters
+clustering:
+  radius_meters: 5.0
+  min_points: 2
+  max_clusters: 1000
+
+# Export settings
+export:
+  formats: ["csv", "json", "geojson"]
+  output_dir: "outputs"
+```
+
+## 📁 Output Files
+
+### **results.json**
+```json
+{
+  "success": true,
+  "clusters_created": 3,
+  "total_points": 35,
+  "clusters": [
+    {
+      "cluster_id": "cluster_001",
+      "name": null,
+      "center_latitude": 59.3294,
+      "center_longitude": 18.0687,
+      "radius_meters": 5.0,
+      "point_count": 15
+    }
+  ]
+}
+```
+
+### **boundaries.geojson**
 ```json
 {
   "type": "FeatureCollection",
@@ -143,41 +145,69 @@ Found 1 unknown clusters:
     {
       "type": "Feature",
       "properties": {
-        "cluster_id": "cluster_123",
-        "name": "Deer Feeding Area",
-        "point_count": 3,
-        "is_named": true
+        "cluster_id": "cluster_001",
+        "area_square_meters": 78.5,
+        "perimeter_meters": 31.4
       },
       "geometry": {
         "type": "Polygon",
-        "coordinates": [[[12.5683, 55.6761], [12.5684, 55.6762], ...]]
+        "coordinates": [[
+          [18.0687, 59.3294],
+          [18.0688, 59.3295],
+          [18.0689, 59.3296]
+        ]]
       }
     }
   ]
 }
 ```
 
-### KML
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-<Document>
-    <name>GPS Clusters</name>
-    <Placemark>
-        <name>Deer Feeding Area (Center)</name>
-        <Point>
-            <coordinates>12.5683,55.6761,0</coordinates>
-        </Point>
-    </Placemark>
-</Document>
-</kml>
+## 🎯 Key Features
+
+### **1. Automatic Clustering**
+- **GPS proximity clustering** med 5m radius
+- **Automatic cluster creation** fra observations
+- **Cluster statistics** og analytics
+
+### **2. Cluster Naming**
+- **Unknown cluster detection** for manual naming
+- **Batch naming** fra YAML filer
+- **Cluster lookup** og management
+
+### **3. Export Capabilities**
+- **GeoJSON export** til mapping
+- **KML export** til Google Earth
+- **CSV/JSON export** til analysis
+
+### **4. Analytics**
+- **Cluster statistics** og metrics
+- **Temporal analysis** per cluster
+- **Species analysis** per cluster
+
+## 🚀 Advanced Usage
+
+### **Batch Processing**
+```bash
+# Process multiple observation files
+for file in observations/*.yaml; do
+  python -m hugin.cluster_cli process "$file" "results/$(basename "$file" .yaml).json"
+done
 ```
 
-## Database
+### **Automated Naming**
+```bash
+# Auto-name clusters based on location
+python -m hugin.cluster_cli request-unknown --limit 100 | \
+  python scripts/auto_name_clusters.py | \
+  python -m hugin.cluster_cli submit-names auto_names.yaml
+```
 
-Clusters gemmes i SQLite database (`clusters.db` by default) med følgende tabeller:
+### **Export for Mapping**
+```bash
+# Export all formats for mapping
+python -m hugin.cluster_cli export-boundaries boundaries.geojson --format geojson
+python -m hugin.cluster_cli export-boundaries boundaries.kml --format kml
+python -m hugin.cluster_cli export-data clusters.csv --format csv
+```
 
-- `gps_clusters` - Cluster information
-- `gps_cluster_assignments` - Point assignments til clusters
-
-Database filer er ekskluderet fra Git via `.gitignore`.
+Dette giver dig en komplet workflow for GPS cluster management i Hugin! 🎯
