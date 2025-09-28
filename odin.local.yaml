@@ -1,0 +1,166 @@
+name: "Wildlife Processing World (Local)"
+version: "1.0.0"
+description: "Complete wildlife detection pipeline with local infrastructure"
+
+# Infrastructure Definition (Local Setup)
+infrastructure:
+  provider: "local"
+  region: "eu-north-1"
+  cost_optimized: false
+  stack_name: "wildlife-local-stack"
+  
+  # LocalStack Configuration
+  localstack:
+    endpoint: "http://localhost:4566"
+    services: ["s3", "batch", "iam", "cloudformation", "ec2", "logs"]
+    debug: true
+    persistence: true
+  
+  # MinIO Configuration
+  minio:
+    endpoint: "http://localhost:9000"
+    access_key: "minioadmin"
+    secret_key: "minioadmin123"
+    secure: false
+  
+  # Redis Configuration
+  redis:
+    url: "redis://localhost:6379"
+    db: 0
+  
+  # PostgreSQL Configuration
+  postgres:
+    url: "postgresql://wildlife:wildlife123@localhost:5432/wildlife"
+    pool_size: 10
+  
+  # Docker Configuration
+  docker:
+    network: "wildlife-network"
+    volumes:
+      - "./test_data:/app/test_data:ro"
+      - "./output:/app/output"
+  
+  # Local Batch Configuration
+  batch:
+    compute_environment:
+      name: "wildlife-compute-local"
+      type: "LOCAL"
+      state: "ENABLED"
+      status: "VALID"
+      instance_types: ["local"]
+      min_vcpus: 0
+      max_vcpus: 4
+      desired_vcpus: 0
+      subnets: ["local"]
+      security_groups: ["local"]
+      instance_role: "local"
+      service_role: "local"
+    
+    job_queue:
+      name: "wildlife-queue-local"
+      priority: 1
+      state: "ENABLED"
+    
+    # Job Definitions for each stage
+    job_definitions:
+      stage1_manifest:
+        name: "wildlife-stage1-manifest-local"
+        vcpus: 1
+        memory: 2048
+        timeout: 300
+        
+      stage2_detection:
+        name: "wildlife-stage2-detection-local"
+        vcpus: 2
+        memory: 4096
+        timeout: 900
+        gpu: false
+        
+      stage3_reporting:
+        name: "wildlife-stage3-reporting-local"
+        vcpus: 1
+        memory: 2048
+        timeout: 300
+
+# Data Storage (Local Setup)
+storage:
+  s3_bucket: "wildlife-local-data"
+  minio_bucket: "wildlife-local-data"
+  prefixes:
+    raw_data: "raw-data"
+    stage1_manifest: "stage1-manifest"
+    stage2_detections: "stage2-detections"
+    stage3_reports: "stage3-reports"
+    models: "models"
+    logs: "logs"
+
+# Pipeline Stages (Local)
+pipeline:
+  stages:
+    stage0_upload:
+      name: "Data Upload"
+      description: "Upload raw data to local storage"
+      command: "python -m src.odin.cli data upload"
+      timeout: 300
+      
+    stage1_manifest:
+      name: "Manifest Creation"
+      description: "Create manifest from uploaded data"
+      command: "python -m src.odin.cli pipeline stage1"
+      timeout: 300
+      
+    stage2_detection:
+      name: "Wildlife Detection"
+      description: "Run wildlife detection on images/videos"
+      command: "python -m src.odin.cli pipeline stage2"
+      timeout: 900
+      
+    stage3_reporting:
+      name: "Report Generation"
+      description: "Generate reports and compress data"
+      command: "python -m src.odin.cli pipeline stage3"
+      timeout: 300
+
+# Local Processing Configuration
+processing:
+  local: true
+  docker: true
+  workers: 2
+  memory_limit: "4g"
+  cpu_limit: "2"
+  
+  # Model Configuration
+  models:
+    detection:
+      name: "wildlife-detector"
+      version: "1.0.0"
+      local_path: "./models/wildlife-detector"
+      gpu: false
+      
+    classification:
+      name: "swedish-wildlife-classifier"
+      version: "1.0.0"
+      local_path: "./models/swedish-wildlife-classifier"
+      gpu: false
+
+# Cost Optimization (Local)
+cost_optimization:
+  enabled: false
+  spot_instances: false
+  auto_shutdown: true
+  max_runtime: 3600  # 1 hour
+  
+# Monitoring (Local)
+monitoring:
+  enabled: true
+  metrics:
+    - "processing_time"
+    - "memory_usage"
+    - "cpu_usage"
+    - "storage_usage"
+  
+  logging:
+    level: "INFO"
+    format: "json"
+    output: "file"
+    file: "./logs/odin.log"

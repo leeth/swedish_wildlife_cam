@@ -150,6 +150,9 @@ Examples:
   # Apply a time offset (e.g., add 8 months and 6 days)
   python fix_camera_timestamps.py --offset-days 250 /path/to/images/
 
+  # Apply a time offset with minutes (e.g., add 2 hours and 30 minutes)
+  python fix_camera_timestamps.py --offset-hours 2 --offset-minutes 30 /path/to/images/
+
   # Dry run to see what would change
   python fix_camera_timestamps.py --target-date "2025-09-07" --dry-run /path/to/images/
 
@@ -162,6 +165,7 @@ Examples:
     parser.add_argument('--target-date', help='Set all images to this specific date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)')
     parser.add_argument('--offset-days', type=int, help='Add this many days to current EXIF datetime')
     parser.add_argument('--offset-hours', type=int, help='Add this many hours to current EXIF datetime')
+    parser.add_argument('--offset-minutes', type=int, help='Add this many minutes to current EXIF datetime')
     parser.add_argument('--extensions', nargs='+', default=['jpg', 'jpeg', 'tiff', 'tif'], 
                        help='Image file extensions to process')
     parser.add_argument('--dry-run', action='store_true', help='Show what would be changed without modifying files')
@@ -170,11 +174,11 @@ Examples:
     args = parser.parse_args()
     
     # Validate arguments
-    if not args.target_date and not args.offset_days and not args.offset_hours:
-        print("Error: Must specify either --target-date or --offset-days/--offset-hours")
+    if not args.target_date and not args.offset_days and not args.offset_hours and not args.offset_minutes:
+        print("Error: Must specify either --target-date or --offset-days/--offset-hours/--offset-minutes")
         sys.exit(1)
     
-    if args.target_date and (args.offset_days or args.offset_hours):
+    if args.target_date and (args.offset_days or args.offset_hours or args.offset_minutes):
         print("Error: Cannot use --target-date with offset options")
         sys.exit(1)
     
@@ -196,6 +200,8 @@ Examples:
         offset += timedelta(days=args.offset_days)
     if args.offset_hours:
         offset += timedelta(hours=args.offset_hours)
+    if args.offset_minutes:
+        offset += timedelta(minutes=args.offset_minutes)
     
     # Find images to process
     path = Path(args.path)

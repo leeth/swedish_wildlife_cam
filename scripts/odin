@@ -1,0 +1,21 @@
+#!/bin/bash
+"""
+Odin CLI Wrapper
+
+The All-Knowing Infrastructure Manager
+"""
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Activate virtual environment if it exists
+if [ -f "$PROJECT_ROOT/.venv/bin/activate" ]; then
+    source "$PROJECT_ROOT/.venv/bin/activate"
+fi
+
+# Add src to Python path
+export PYTHONPATH="$PROJECT_ROOT/src:$PYTHONPATH"
+
+# Run Odin CLI
+python3 -m odin.cli "$@"
