@@ -7,6 +7,7 @@
 Odins Ravne er et omfattende system til svensk vildtmonitorering der kombinerer:
 - **Munin**: Data indtagelse, procesering og lagring (Stage 0-2)
 - **Hugin**: Analyse, indsigt og visualisering (Stage 2+)
+- **Odin**: All-Father - Infrastruktur management og orchestration
 
 ## 🚀 Hurtig Start
 
@@ -21,6 +22,10 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 
 ### Lokal Udvikling
 ```bash
+# Odin - Infrastruktur Management
+./scripts/odin --config odin.local.yaml infrastructure setup
+./scripts/odin --config odin.local.yaml pipeline run
+
 # Munin - Data Indtagelse
 cd munin/
 pip install -e .
@@ -34,7 +39,11 @@ hugin analyze /path/to/data
 
 ### Cloud Deployment
 ```bash
-# AWS Setup
+# Odin - AWS Infrastructure
+./scripts/odin --config odin.yaml infrastructure setup
+./scripts/odin --config odin.yaml pipeline run
+
+# AWS Setup (Legacy)
 ./scripts/infrastructure/deploy_aws_infrastructure.py
 ./scripts/infrastructure/create_aws_test_user.py
 
@@ -53,14 +62,27 @@ aws batch submit-job --job-definition wildlife-pipeline
 │   ├── src/hugin/          # Core Hugin moduler
 │   ├── pyproject.toml      # Hugin dependencies
 │   └── README.md           # Hugin dokumentation
+├── src/odin/                # All-Father (Infrastruktur)
+│   ├── cli.py              # Odin CLI interface
+│   ├── config.py           # Configuration management
+│   ├── infrastructure.py  # AWS infrastructure
+│   ├── pipeline.py         # Pipeline orchestration
+│   ├── local_infrastructure.py # Local infrastructure
+│   └── local_pipeline.py   # Local pipeline
 ├── scripts/                 # Utility scripts
+│   ├── odin                # Main Odin CLI
+│   ├── test_local_odin.sh  # Local testing
 │   ├── infrastructure/     # AWS/cloud setup
 │   ├── image_tools/        # Billedbehandling utilities
 │   └── data_upload/        # Cloud data management
+├── docker-compose.local.yml # Local infrastructure
+├── odin.yaml               # AWS configuration
+├── odin.local.yaml         # Local configuration
 └── docs/                   # Dokumentation
     ├── ROADMAP.md          # Udviklings roadmap
     ├── INFRASTRUCTURE.md   # Setup og deployment
-    ├── CLOUD_OPTIMIZATION.md # AWS/cloud optimering
+    ├── LOCAL_SETUP.md      # Local development
+    ├── COST_OPTIMIZATION.md # Cost optimization
     └── UTILITIES.md        # Tools og utilities
 ```
 
@@ -132,6 +154,52 @@ hugin report /data --format pdf
 hugin dashboard /data --web
 ```
 
+## ⚡ Odin (All-Father)
+
+**Formål**: Infrastruktur management og orchestration
+
+**Nøglefunktioner**:
+- AWS infrastruktur setup og teardown
+- Lokal udvikling med Docker
+- Pipeline orchestration
+- Cost optimization
+- Resource management
+
+### 🏗️ Infrastruktur Management
+- **AWS Setup**: CloudFormation, Batch, S3, IAM
+- **Local Setup**: Docker Compose, LocalStack, MinIO
+- **Cost Optimization**: Spot instances, auto-scaling
+- **Resource Monitoring**: Real-time status og costs
+
+### 🚀 Pipeline Orchestration
+- **Stage Management**: Stage 0-3 pipeline execution
+- **Batch Processing**: AWS Batch job submission
+- **Local Processing**: Docker container execution
+- **Data Management**: S3 upload/download, cleanup
+
+**CLI Kommandoer**:
+```bash
+# Infrastructure Management
+./scripts/odin --config odin.local.yaml infrastructure setup
+./scripts/odin --config odin.local.yaml infrastructure teardown
+./scripts/odin --config odin.local.yaml infrastructure status
+
+# Pipeline Execution
+./scripts/odin --config odin.local.yaml pipeline run
+./scripts/odin --config odin.local.yaml pipeline stage1
+./scripts/odin --config odin.local.yaml pipeline stage2
+./scripts/odin --config odin.local.yaml pipeline stage3
+
+# Data Management
+./scripts/odin --config odin.local.yaml data upload
+./scripts/odin --config odin.local.yaml data download
+./scripts/odin --config odin.local.yaml data list
+
+# Cost Management
+./scripts/odin --config odin.local.yaml cost report
+./scripts/odin --config odin.local.yaml cost optimize
+```
+
 ## 🛠️ Teknologi Stack
 
 ### Core Teknologier
@@ -158,7 +226,10 @@ hugin dashboard /data --web
 ### Cloud Teknologier
 - **AWS**: S3, Batch, ECR, CloudFormation
 - **Docker**: Containerisering
-- **Terraform**: Infrastructure as Code
+- **LocalStack**: AWS API emulator
+- **MinIO**: S3-compatible storage
+- **Redis**: Caching og job queues
+- **PostgreSQL**: Metadata storage
 
 ### Data Formater
 - **Parquet**: Kolonne data lagring
@@ -178,6 +249,15 @@ hugin dashboard /data --web
 - Sikkerhed implementering
 - Omfattende testning
 
+### ✅ Completed (Odin)
+- Infrastruktur management system
+- AWS og lokal setup
+- Pipeline orchestration
+- Cost optimization
+- Docker Compose setup
+- LocalStack integration
+- CLI interface
+
 ### 🚧 I Gang (Hugin)
 - Analyse framework
 - Data modeller og validering
@@ -188,8 +268,9 @@ Se [ROADMAP.md](docs/ROADMAP.md) for detaljeret udviklingsplan.
 
 ## 🔧 Setup & Deployment
 
-- **Lokal Setup**: [INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md)
-- **Cloud Optimering**: [CLOUD_OPTIMIZATION.md](docs/CLOUD_OPTIMIZATION.md)
+- **Lokal Setup**: [LOCAL_SETUP.md](docs/LOCAL_SETUP.md)
+- **Infrastruktur**: [INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md)
+- **Cost Optimering**: [COST_OPTIMIZATION.md](docs/COST_OPTIMIZATION.md)
 - **Utilities & Tools**: [UTILITIES.md](docs/UTILITIES.md)
 
 ## 🤝 Bidrag
