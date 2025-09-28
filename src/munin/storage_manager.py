@@ -3,28 +3,29 @@ SQLite database module for wildlife detection results.
 """
 
 from __future__ import annotations
+
 import sqlite3
-from pathlib import Path
-from typing import List, Dict, Any, Optional
-from datetime import datetime
-import json
+from typing import TYPE_CHECKING, Any
 
 from .database_adapter import DatabaseAdapter, SQLiteAdapter
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class WildlifeDatabase:
     """SQLite database for storing wildlife detection results."""
-    
-    def __init__(self, db_path: Path, database_adapter: Optional[DatabaseAdapter] = None):
+
+    def __init__(self, db_path: Path, database_adapter: DatabaseAdapter | None = None):
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.database_adapter = database_adapter or SQLiteAdapter(db_path)
-    
+
     def _init_database(self):
         """Initialize the database with required tables."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             # Main detections table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS detections (
@@ -46,7 +47,7 @@ class WildlifeDatabase:
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            
+
             # Individual detection results table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS detection_results (
@@ -62,28 +63,28 @@ class WildlifeDatabase:
                     FOREIGN KEY (detection_id) REFERENCES detections (id)
                 )
             """)
-            
+
             # Create indexes for better performance
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_detections_camera ON detections(camera_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_detections_timestamp ON detections(timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_detections_gps ON detections(latitude, longitude)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_detection ON detection_results(detection_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_label ON detection_results(label)")
-            
+
             conn.commit()
-    
-    def insert_detection(self, detection_data: Dict[str, Any]) -> int:
+
+    def insert_detection(self, detection_data: dict[str, Any]) -> int:
         """Insert a detection record and return the detection ID."""
         return self.database_adapter.insert_detection(detection_data)
-    
-    def get_detections_by_camera(self, camera_id: str) -> List[Dict[str, Any]]:
+
+    def get_detections_by_camera(self, camera_id: str) -> list[dict[str, Any]]:
         """Get all detections for a specific camera."""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             cursor.execute("""
-                SELECT d.*, 
+                SELECT d.*,
                        GROUP_CONCAT(
                            json_object(
                                'label', dr.label,
@@ -98,17 +99,17 @@ class WildlifeDatabase:
                 GROUP BY d.id
                 ORDER BY d.timestamp
             """, (camera_id,))
-            
+
             return [dict(row) for row in cursor.fetchall()]
-    
-    def get_detections_by_species(self, species: str) -> List[Dict[str, Any]]:
+
+    def get_detections_by_species(self, species: str) -> list[dict[str, Any]]:
         """Get all detections for a specific species."""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             cursor.execute("""
-                SELECT d.*, 
+                SELECT d.*,
                        GROUP_CONCAT(
                            json_object(
                                'label', dr.label,
@@ -123,17 +124,17 @@ class WildlifeDatabase:
                 GROUP BY d.id
                 ORDER BY d.timestamp
             """, (species,))
-            
+
             return [dict(row) for row in cursor.fetchall()]
-    
-    def get_detections_with_gps(self) -> List[Dict[str, Any]]:
+
+    def get_detections_with_gps(self) -> list[dict[str, Any]]:
         """Get all detections that have GPS coordinates."""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             cursor.execute("""
-                SELECT d.*, 
+                SELECT d.*,
                        GROUP_CONCAT(
                            json_object(
                                'label', dr.label,
@@ -148,21 +149,21 @@ class WildlifeDatabase:
                 GROUP BY d.id
                 ORDER BY d.timestamp
             """)
-            
+
             return [dict(row) for row in cursor.fetchall()]
-    
-    def get_summary_stats(self) -> Dict[str, Any]:
+
+    def get_summary_stats(self) -> dict[str, Any]:
         """Get summary statistics from the database."""
         return self.database_adapter.get_summary_stats()
-    
+
     def export_to_csv(self, output_path: Path):
         """Export all detections to CSV format."""
         import pandas as pd
-        
+
         with sqlite3.connect(self.db_path) as conn:
             # Get all detections with their results
             df = pd.read_sql_query("""
-                SELECT d.*, 
+                SELECT d.*,
                        dr.label as detection_label,
                        dr.confidence as detection_confidence,
                        dr.bbox_x1, dr.bbox_y1, dr.bbox_x2, dr.bbox_y2,
@@ -171,9 +172,9 @@ class WildlifeDatabase:
                 LEFT JOIN detection_results dr ON d.id = dr.detection_id
                 ORDER BY d.timestamp, d.id
             """, conn)
-            
+
             df.to_csv(output_path, index=False)
-    
+
     def close(self):
         """Close database connection (not needed for sqlite3 context manager)."""
         pass

@@ -9,13 +9,12 @@ This module defines Pydantic models for:
 - GPS coordinates and timestamps
 """
 
-from datetime import datetime
-from typing import Optional, List, Dict, Any, Union
-from pathlib import Path
 import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from pydantic import BaseModel, Field, validator, root_validator
-import numpy as np
+from pydantic import BaseModel, Field, root_validator, validator
 
 
 class CameraInfo(BaseModel):
@@ -29,13 +28,13 @@ class CameraInfo(BaseModel):
     camera_make: Optional[str] = Field(None, description="Camera manufacturer")
     camera_model: Optional[str] = Field(None, description="Camera model")
     sd_card_id: Optional[str] = Field(None, description="SD card identifier")
-    
+
     @validator('gps_latitude')
     def validate_latitude(cls, v):
         if v is not None and (v < -90 or v > 90):
             raise ValueError('Latitude must be between -90 and 90')
         return v
-    
+
     @validator('gps_longitude')
     def validate_longitude(cls, v):
         if v is not None and (v < -180 or v > 180):
@@ -55,13 +54,13 @@ class DetectionResult(BaseModel):
     stage1_confidence: float = Field(..., ge=0, le=1, description="Stage 1 confidence score")
     stage2_model: Optional[str] = Field(None, description="Stage 2 model identifier")
     stage2_confidence: Optional[float] = Field(None, ge=0, le=1, description="Stage 2 confidence score")
-    
+
     @validator('bbox_x2')
     def validate_bbox_x2(cls, v, values):
         if 'bbox_x1' in values and v <= values['bbox_x1']:
             raise ValueError('bbox_x2 must be greater than bbox_x1')
         return v
-    
+
     @validator('bbox_y2')
     def validate_bbox_y2(cls, v, values):
         if 'bbox_y1' in values and v <= values['bbox_y1']:
@@ -78,21 +77,21 @@ class ReviewStatus(BaseModel):
     reviewer_id: Optional[str] = Field(None, description="ID of human reviewer")
     review_timestamp: Optional[datetime] = Field(None, description="When review was completed")
     auto_approved: bool = Field(False, description="Whether auto-approved by pipeline")
-    
+
     @root_validator
     def validate_review_status(cls, values):
         needs_review = values.get('needs_review', False)
         is_doubtful = values.get('is_doubtful', False)
         auto_approved = values.get('auto_approved', False)
-        
+
         # If auto-approved, should not need review
         if auto_approved and needs_review:
             raise ValueError('Auto-approved detections should not need review')
-        
+
         # If doubtful, should need review
         if is_doubtful and not needs_review:
             values['needs_review'] = True
-        
+
         return values
 
 
@@ -104,13 +103,13 @@ class GPSCoordinates(BaseModel):
     accuracy: Optional[float] = Field(None, gt=0, description="GPS accuracy in meters")
     timestamp: Optional[datetime] = Field(None, description="GPS timestamp")
     source: str = Field("exif", description="Source of GPS data (exif, manual, etc.)")
-    
+
     @validator('latitude')
     def validate_latitude(cls, v):
         if v < -90 or v > 90:
             raise ValueError('Latitude must be between -90 and 90')
         return v
-    
+
     @validator('longitude')
     def validate_longitude(cls, v):
         if v < -180 or v > 180:
@@ -130,13 +129,13 @@ class GPSCluster(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.now, description="Last update timestamp")
     description: Optional[str] = Field(None, description="Cluster description")
     is_named: bool = Field(False, description="Whether cluster has been manually named")
-    
+
     @validator('center_latitude')
     def validate_center_latitude(cls, v):
         if v < -90 or v > 90:
             raise ValueError('Center latitude must be between -90 and 90')
         return v
-    
+
     @validator('center_longitude')
     def validate_center_longitude(cls, v):
         if v < -180 or v > 180:
@@ -153,13 +152,13 @@ class GPSClusterAssignment(BaseModel):
     longitude: float = Field(..., ge=-180, le=180, description="GPS longitude")
     distance_to_center: float = Field(..., ge=0, description="Distance to cluster center in meters")
     assigned_at: datetime = Field(default_factory=datetime.now, description="Assignment timestamp")
-    
+
     @validator('latitude')
     def validate_latitude(cls, v):
         if v < -90 or v > 90:
             raise ValueError('Latitude must be between -90 and 90')
         return v
-    
+
     @validator('longitude')
     def validate_longitude(cls, v):
         if v < -180 or v > 180:
@@ -176,13 +175,13 @@ class UnknownCluster(BaseModel):
     first_seen: datetime = Field(..., description="When cluster was first detected")
     last_seen: datetime = Field(..., description="When cluster was last seen")
     sample_observations: List[str] = Field(default_factory=list, description="Sample observation IDs")
-    
+
     @validator('center_latitude')
     def validate_center_latitude(cls, v):
         if v < -90 or v > 90:
             raise ValueError('Center latitude must be between -90 and 90')
         return v
-    
+
     @validator('center_longitude')
     def validate_center_longitude(cls, v):
         if v < -180 or v > 180:
@@ -203,25 +202,25 @@ class ClusterBoundary(BaseModel):
     convex_hull_points: List[Tuple[float, float]] = Field(default_factory=list, description="Convex hull points for mapping")
     area_square_meters: Optional[float] = Field(None, description="Approximate area in square meters")
     perimeter_meters: Optional[float] = Field(None, description="Approximate perimeter in meters")
-    
+
     @validator('min_latitude')
     def validate_min_latitude(cls, v):
         if v < -90 or v > 90:
             raise ValueError('Min latitude must be between -90 and 90')
         return v
-    
+
     @validator('max_latitude')
     def validate_max_latitude(cls, v):
         if v < -90 or v > 90:
             raise ValueError('Max latitude must be between -90 and 90')
         return v
-    
+
     @validator('min_longitude')
     def validate_min_longitude(cls, v):
         if v < -180 or v > 180:
             raise ValueError('Min longitude must be between -180 and 180')
         return v
-    
+
     @validator('max_longitude')
     def validate_max_longitude(cls, v):
         if v < -180 or v > 180:
@@ -242,7 +241,7 @@ class ImageMetadata(BaseModel):
     camera_model: Optional[str] = Field(None, description="Camera model")
     gps: Optional[GPSCoordinates] = Field(None, description="GPS coordinates")
     file_hash: Optional[str] = Field(None, description="File hash for integrity")
-    
+
     @validator('file_path')
     def validate_file_path(cls, v):
         if not v.exists():
@@ -261,7 +260,7 @@ class PipelineArtifact(BaseModel):
     config_hash: str = Field(..., description="Configuration hash")
     created_at: datetime = Field(default_factory=datetime.now, description="Creation timestamp")
     file_size_bytes: int = Field(..., gt=0, description="Artifact file size")
-    
+
     @validator('artifact_type')
     def validate_artifact_type(cls, v):
         allowed_types = ['crop', 'prediction', 'manifest', 'parquet', 'log']
@@ -280,7 +279,7 @@ class ManifestEntry(BaseModel):
     det_score: float = Field(..., ge=0, le=1, description="Detection confidence score")
     stage1_model: str = Field(..., description="Stage 1 model identifier")
     config_hash: str = Field(..., description="Configuration hash")
-    
+
     @validator('bbox')
     def validate_bbox(cls, v):
         if len(v) != 4:
@@ -319,7 +318,7 @@ class ObservationRecord(BaseModel):
     model_hashes: Dict[str, str] = Field(..., description="Model hashes used")
     source_etag: Optional[str] = Field(None, description="Source file ETag")
     processing_metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-    
+
     @validator('top_label')
     def set_top_label(cls, v, values):
         if v is None and 'observations' in values:
@@ -329,7 +328,7 @@ class ObservationRecord(BaseModel):
                 top_obs = max(observations, key=lambda x: x.confidence)
                 return top_obs.label
         return v
-    
+
     @validator('top_confidence')
     def set_top_confidence(cls, v, values):
         if v is None and 'observations' in values:
@@ -352,7 +351,7 @@ class CompressedObservation(BaseModel):
     avg_confidence: float = Field(..., ge=0, le=1, description="Average confidence score")
     frame_count: int = Field(..., gt=0, description="Number of frames")
     timeline: List[Dict[str, Any]] = Field(default_factory=list, description="Timeline of detections")
-    
+
     @validator('end_time')
     def validate_end_time(cls, v, values):
         if 'start_time' in values and v <= values['start_time']:
@@ -372,13 +371,13 @@ class PipelineConfig(BaseModel):
     stage2_confidence: float = Field(0.5, ge=0, le=1, description="Stage 2 confidence threshold")
     compression_window_minutes: int = Field(10, gt=0, description="Compression window in minutes")
     min_duration_seconds: float = Field(5.0, ge=0, description="Minimum duration for compression")
-    
+
     @validator('max_relative_area')
     def validate_max_area(cls, v, values):
         if 'min_relative_area' in values and v <= values['min_relative_area']:
             raise ValueError('Max relative area must be greater than min relative area')
         return v
-    
+
     @validator('max_aspect_ratio')
     def validate_max_aspect(cls, v, values):
         if 'min_aspect_ratio' in values and v <= values['min_aspect_ratio']:

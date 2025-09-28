@@ -4,8 +4,9 @@ Kort Pandas Eksempel - Hent Data fra Parquet og SQLite
 Dette er det korteste eksempel der viser hvordan du henter data fra begge kilder.
 """
 
-import pandas as pd
 import sqlite3
+
+import pandas as pd
 
 # 1. Hent store datasæt fra Parquet
 df = pd.read_parquet('data.parquet')

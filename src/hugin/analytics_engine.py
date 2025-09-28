@@ -10,82 +10,78 @@ This module provides:
 
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Any, Tuple
-from datetime import datetime, timedelta
-import logging
+from typing import Any, Dict, List, Optional, Union
 
 try:
-    import polars as pl
     import pandas as pd
-    import numpy as np
-    from polars import col, lit, when
+    import polars as pl
+    from polars import col
 except ImportError as e:
     print(f"Missing dependencies for analytics engine: {e}")
     print("Install with: pip install polars pandas numpy")
     exit(1)
 
-from .data_contracts import ObservationRecord, CompressedObservation, CameraInfo
-from .logging_config import get_logger
 from .efficient_cluster_lookup import EfficientClusterLookup
+from .logging_config import get_logger
 
 logger = get_logger("wildlife_pipeline.analytics_engine")
 
 
 class AnalyticsEngine:
     """High-performance analytics engine using Polars."""
-    
+
     def __init__(self, cache_dir: Optional[str] = None, cluster_lookup: Optional[EfficientClusterLookup] = None):
         self.cache_dir = Path(cache_dir) if cache_dir else Path.home() / ".wildlife_cache" / "analytics"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.logger = logger
         self.cluster_lookup = cluster_lookup
-        
+
         # Configure Polars for optimal performance
         pl.Config.set_streaming_chunk_size(8192)
         pl.Config.set_fmt_str_lengths(100)
-        
+
         self.logger.info("🚀 Analytics engine initialized with Polars")
-    
+
     def load_observations_from_parquet(self, parquet_path: Union[str, Path]) -> pl.DataFrame:
         """Load observations from Parquet file using Polars."""
         parquet_path = Path(parquet_path)
-        
+
         if not parquet_path.exists():
             raise FileNotFoundError(f"Parquet file not found: {parquet_path}")
-        
+
         self.logger.info(f"📊 Loading observations from: {parquet_path}")
-        
+
         try:
             # Load with streaming for large files
             df = pl.scan_parquet(str(parquet_path)).collect()
-            
+
             self.logger.info(f"✅ Loaded {len(df)} observations")
             return df
-            
+
         except Exception as e:
             self.logger.error(f"❌ Error loading Parquet file: {e}")
             raise
-    
+
     def load_observations_from_pandas(self, df: pd.DataFrame) -> pl.DataFrame:
         """Convert pandas DataFrame to Polars DataFrame."""
         self.logger.info(f"🔄 Converting pandas DataFrame to Polars ({len(df)} rows)")
-        
+
         try:
             # Convert pandas to polars
             pl_df = pl.from_pandas(df)
             self.logger.info("✅ Conversion completed")
             return pl_df
-            
+
         except Exception as e:
             self.logger.error(f"❌ Error converting to Polars: {e}")
             raise
-    
+
     def generate_species_report(self, df: pl.DataFrame) -> Dict[str, Any]:
         """Generate comprehensive species detection report."""
         self.logger.info("📈 Generating species report")
-        
+
         start_time = time.time()
-        
+
         # Species detection counts
         species_counts = (
             df.group_by("top_label")
@@ -98,7 +94,7 @@ class AnalyticsEngine:
             ])
             .sort("total_detections", descending=True)
         )
-        
+
         # Camera activity
         camera_activity = (
             df.group_by("camera_id")
@@ -110,7 +106,7 @@ class AnalyticsEngine:
             ])
             .sort("total_observations", descending=True)
         )
-        
+
         # Temporal analysis
         temporal_analysis = (
             df.with_columns([
@@ -125,7 +121,7 @@ class AnalyticsEngine:
             ])
             .sort("date", descending=True)
         )
-        
+
         # GPS analysis (if available)
         gps_analysis = None
         if "gps_latitude" in df.columns and "gps_longitude" in df.columns:
@@ -139,9 +135,9 @@ class AnalyticsEngine:
                     col("gps_longitude").std().alias("lon_std"),
                 ])
             )
-        
+
         processing_time = time.time() - start_time
-        
+
         report = {
             "summary": {
                 "total_observations": len(df),
@@ -158,16 +154,16 @@ class AnalyticsEngine:
             "temporal_analysis": temporal_analysis.to_dicts(),
             "gps_analysis": gps_analysis.to_dicts() if gps_analysis is not None else None,
         }
-        
+
         self.logger.info(f"✅ Species report generated in {processing_time:.2f}s")
         return report
-    
+
     def generate_camera_report(self, df: pl.DataFrame) -> Dict[str, Any]:
         """Generate camera-specific analytics report."""
         self.logger.info("📷 Generating camera report")
-        
+
         start_time = time.time()
-        
+
         # Camera performance metrics
         camera_metrics = (
             df.group_by("camera_id")
@@ -185,7 +181,7 @@ class AnalyticsEngine:
             ])
             .sort("total_observations", descending=True)
         )
-        
+
         # Species distribution per camera
         species_per_camera = (
             df.group_by(["camera_id", "top_label"])
@@ -195,7 +191,7 @@ class AnalyticsEngine:
             ])
             .sort(["camera_id", "count"], descending=[False, True])
         )
-        
+
         # Temporal patterns per camera
         temporal_patterns = (
             df.with_columns([
@@ -208,26 +204,26 @@ class AnalyticsEngine:
             ])
             .sort(["camera_id", "hour"])
         )
-        
+
         processing_time = time.time() - start_time
-        
+
         report = {
             "camera_metrics": camera_metrics.to_dicts(),
             "species_per_camera": species_per_camera.to_dicts(),
             "temporal_patterns": temporal_patterns.to_dicts(),
             "processing_time_seconds": processing_time,
         }
-        
+
         self.logger.info(f"✅ Camera report generated in {processing_time:.2f}s")
         return report
-    
-    def generate_temporal_report(self, df: pl.DataFrame, 
+
+    def generate_temporal_report(self, df: pl.DataFrame,
                                time_window: str = "1h") -> Dict[str, Any]:
         """Generate temporal analysis report."""
         self.logger.info(f"⏰ Generating temporal report (window: {time_window})")
-        
+
         start_time = time.time()
-        
+
         # Time-based aggregations
         temporal_df = (
             df.with_columns([
@@ -237,7 +233,7 @@ class AnalyticsEngine:
                 col("timestamp").dt.date().alias("date"),
             ])
         )
-        
+
         # Activity by time window
         activity_by_window = (
             temporal_df
@@ -250,7 +246,7 @@ class AnalyticsEngine:
             ])
             .sort("time_window")
         )
-        
+
         # Hourly patterns
         hourly_patterns = (
             temporal_df
@@ -262,7 +258,7 @@ class AnalyticsEngine:
             ])
             .sort("hour")
         )
-        
+
         # Weekly patterns
         weekly_patterns = (
             temporal_df
@@ -274,41 +270,41 @@ class AnalyticsEngine:
             ])
             .sort("weekday")
         )
-        
+
         processing_time = time.time() - start_time
-        
+
         report = {
             "activity_by_window": activity_by_window.to_dicts(),
             "hourly_patterns": hourly_patterns.to_dicts(),
             "weekly_patterns": weekly_patterns.to_dicts(),
             "processing_time_seconds": processing_time,
         }
-        
+
         self.logger.info(f"✅ Temporal report generated in {processing_time:.2f}s")
         return report
-    
+
     def generate_gps_report(self, df: pl.DataFrame) -> Dict[str, Any]:
         """Generate GPS-based spatial analysis report."""
         self.logger.info("🗺️  Generating GPS spatial report")
-        
+
         # Check if GPS data is available
         gps_columns = ["gps_latitude", "gps_longitude"]
         if not all(col in df.columns for col in gps_columns):
             self.logger.warning("⚠️  GPS columns not found in data")
             return {"error": "GPS data not available"}
-        
+
         start_time = time.time()
-        
+
         # Filter records with GPS data
         gps_df = df.filter(
-            col("gps_latitude").is_not_null() & 
+            col("gps_latitude").is_not_null() &
             col("gps_longitude").is_not_null()
         )
-        
+
         if len(gps_df) == 0:
             self.logger.warning("⚠️  No GPS data found")
             return {"error": "No GPS data available"}
-        
+
         # Spatial aggregations
         spatial_analysis = (
             gps_df
@@ -322,7 +318,7 @@ class AnalyticsEngine:
             ])
             .sort("count", descending=True)
         )
-        
+
         # Camera locations
         camera_locations = (
             gps_df
@@ -336,7 +332,7 @@ class AnalyticsEngine:
             ])
             .sort("observation_count", descending=True)
         )
-        
+
         # Spatial clustering (simplified)
         spatial_clusters = (
             gps_df
@@ -352,9 +348,9 @@ class AnalyticsEngine:
             ])
             .sort("cluster_size", descending=True)
         )
-        
+
         processing_time = time.time() - start_time
-        
+
         report = {
             "spatial_analysis": spatial_analysis.to_dicts(),
             "camera_locations": camera_locations.to_dicts(),
@@ -366,32 +362,32 @@ class AnalyticsEngine:
             },
             "processing_time_seconds": processing_time,
         }
-        
+
         self.logger.info(f"✅ GPS report generated in {processing_time:.2f}s")
         return report
-    
+
     def generate_cluster_aware_report(self, df: pl.DataFrame) -> Dict[str, Any]:
         """Generate analytics report with GPS cluster data integration."""
         self.logger.info("🗺️  Generating cluster-aware analytics report")
-        
+
         if not self.cluster_service:
             self.logger.warning("⚠️  No cluster service available, generating basic GPS report")
             return self.generate_gps_report(df)
-        
+
         start_time = time.time()
-        
+
         # Get cluster data
         cluster_stats = self.cluster_service.get_cluster_analytics()
         cluster_boundaries = self.cluster_service.get_all_cluster_boundaries()
-        
+
         # Basic GPS analysis
         gps_report = self.generate_gps_report(df)
-        
+
         # Cluster-specific analysis
         cluster_analysis = self._analyze_species_by_cluster(df)
         temporal_cluster_analysis = self._analyze_temporal_by_cluster(df)
         activity_patterns = self._analyze_cluster_activity_patterns(df)
-        
+
         # Combine all analysis
         cluster_aware_report = {
             "basic_gps_analysis": gps_report,
@@ -403,30 +399,29 @@ class AnalyticsEngine:
             "cluster_coverage": self._calculate_cluster_coverage(df),
             "processing_time_seconds": time.time() - start_time
         }
-        
+
         self.logger.info(f"✅ Cluster-aware report generated in {time.time() - start_time:.2f}s")
         return cluster_aware_report
-    
+
     def _analyze_species_by_cluster(self, df: pl.DataFrame) -> Dict[str, Any]:
         """Analyze species distribution by GPS cluster."""
         if not self.cluster_service:
             return {"error": "No cluster service available"}
-        
+
         clusters = self.cluster_service.manager.get_all_clusters()
         species_analysis = {}
-        
+
         for cluster in clusters:
             # Get assignments for this cluster
             assignments = self.cluster_service.manager.get_cluster_assignments(cluster.cluster_id)
-            
+
             if assignments:
                 # Analyze species in this cluster
-                cluster_species = {}
-                for assignment in assignments:
+                for _assignment in assignments:
                     # This would need to be connected to observation data
                     # For now, return basic structure
                     pass
-                
+
                 species_analysis[cluster.cluster_id] = {
                     "cluster_name": cluster.name,
                     "cluster_id": cluster.cluster_id,
@@ -438,7 +433,7 @@ class AnalyticsEngine:
                     "dominant_species": "unknown",  # Would determine from data
                     "activity_level": "medium"  # Would calculate from data
                 }
-        
+
         return {
             "method": "species_by_cluster",
             "description": "Species distribution analysis by GPS cluster",
@@ -447,18 +442,18 @@ class AnalyticsEngine:
             "unknown_clusters": len([c for c in clusters if not c.is_named]),
             "species_by_cluster": species_analysis
         }
-    
+
     def _analyze_temporal_by_cluster(self, df: pl.DataFrame) -> Dict[str, Any]:
         """Analyze temporal patterns by cluster."""
         if not self.cluster_service:
             return {"error": "No cluster service available"}
-        
+
         clusters = self.cluster_service.manager.get_all_clusters()
         temporal_analysis = {}
-        
+
         for cluster in clusters:
             assignments = self.cluster_service.manager.get_cluster_assignments(cluster.cluster_id)
-            
+
             if assignments:
                 # Analyze temporal patterns
                 timestamps = [a.assigned_at for a in assignments]
@@ -466,7 +461,7 @@ class AnalyticsEngine:
                     first_activity = min(timestamps)
                     last_activity = max(timestamps)
                     duration = last_activity - first_activity
-                    
+
                     temporal_analysis[cluster.cluster_id] = {
                         "cluster_name": cluster.name,
                         "cluster_id": cluster.cluster_id,
@@ -477,30 +472,30 @@ class AnalyticsEngine:
                         "point_count": cluster.point_count,
                         "is_named": cluster.is_named
                     }
-        
+
         return {
             "method": "temporal_by_cluster",
             "description": "Temporal pattern analysis by GPS cluster",
             "clusters_analyzed": len(clusters),
             "temporal_by_cluster": temporal_analysis
         }
-    
+
     def _analyze_cluster_activity_patterns(self, df: pl.DataFrame) -> Dict[str, Any]:
         """Analyze activity patterns across clusters."""
         if not self.cluster_service:
             return {"error": "No cluster service available"}
-        
+
         clusters = self.cluster_service.manager.get_all_clusters()
         named_clusters = [c for c in clusters if c.is_named]
         unknown_clusters = [c for c in clusters if not c.is_named]
-        
+
         # Calculate activity metrics
         total_points = sum(c.point_count for c in clusters)
         avg_points_per_cluster = total_points / len(clusters) if clusters else 0
-        
+
         # Find most active clusters
         most_active = sorted(clusters, key=lambda x: x.point_count, reverse=True)[:5]
-        
+
         return {
             "method": "cluster_activity_patterns",
             "description": "Activity pattern analysis across GPS clusters",
@@ -520,30 +515,30 @@ class AnalyticsEngine:
                 for c in most_active
             ]
         }
-    
+
     def _calculate_cluster_coverage(self, df: pl.DataFrame) -> Dict[str, Any]:
         """Calculate cluster coverage statistics."""
         if not self.cluster_service:
             return {"error": "No cluster service available"}
-        
+
         # Get GPS data
         gps_columns = ["gps_latitude", "gps_longitude"]
         if not all(col in df.columns for col in gps_columns):
             return {"error": "GPS columns not found in data"}
-        
+
         # Filter records with GPS data
         gps_df = df.filter(
-            col("gps_latitude").is_not_null() & 
+            col("gps_latitude").is_not_null() &
             col("gps_longitude").is_not_null()
         )
-        
+
         if len(gps_df) == 0:
             return {"error": "No GPS data found"}
-        
+
         # Get cluster assignments
         clusters = self.cluster_service.manager.get_all_clusters()
         total_assignments = sum(len(self.cluster_service.manager.get_cluster_assignments(c.cluster_id)) for c in clusters)
-        
+
         return {
             "total_observations": len(df),
             "gps_observations": len(gps_df),
@@ -553,14 +548,14 @@ class AnalyticsEngine:
             "assignment_rate": total_assignments / len(gps_df) * 100 if len(gps_df) > 0 else 0,
             "avg_points_per_cluster": total_assignments / len(clusters) if clusters else 0
         }
-    
+
     def export_to_parquet(self, df: pl.DataFrame, output_path: Union[str, Path]) -> None:
         """Export Polars DataFrame to Parquet with optimization."""
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         self.logger.info(f"💾 Exporting to Parquet: {output_path}")
-        
+
         try:
             # Write with compression and optimization
             df.write_parquet(
@@ -568,45 +563,45 @@ class AnalyticsEngine:
                 compression="snappy",
                 use_pyarrow=True,
             )
-            
+
             file_size = output_path.stat().st_size / (1024 * 1024)  # MB
             self.logger.info(f"✅ Export completed: {file_size:.2f} MB")
-            
+
         except Exception as e:
             self.logger.error(f"❌ Export failed: {e}")
             raise
-    
+
     def export_to_csv(self, df: pl.DataFrame, output_path: Union[str, Path]) -> None:
         """Export Polars DataFrame to CSV."""
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         self.logger.info(f"💾 Exporting to CSV: {output_path}")
-        
+
         try:
             df.write_csv(str(output_path))
             self.logger.info("✅ CSV export completed")
-            
+
         except Exception as e:
             self.logger.error(f"❌ CSV export failed: {e}")
             raise
-    
-    def benchmark_performance(self, df: pl.DataFrame, 
+
+    def benchmark_performance(self, df: pl.DataFrame,
                             operations: List[str] = None) -> Dict[str, float]:
         """Benchmark Polars performance vs pandas."""
         if operations is None:
             operations = [
                 "group_by_species",
-                "temporal_aggregation", 
+                "temporal_aggregation",
                 "gps_analysis",
                 "export_parquet",
             ]
-        
+
         results = {}
-        
+
         for op in operations:
             start_time = time.time()
-            
+
             if op == "group_by_species":
                 _ = df.group_by("top_label").agg([
                     col("observation_id").count(),
@@ -628,70 +623,70 @@ class AnalyticsEngine:
                 temp_path = self.cache_dir / "temp_benchmark.parquet"
                 df.write_parquet(str(temp_path))
                 temp_path.unlink()  # Clean up
-            
+
             elapsed = time.time() - start_time
             results[op] = elapsed
-            
+
             self.logger.info(f"⏱️  {op}: {elapsed:.3f}s")
-        
+
         return results
 
 
 def main():
     """Test the analytics engine."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Analytics Engine")
     parser.add_argument("parquet_path", help="Path to Parquet file")
     parser.add_argument("--output-dir", default="./analytics_output", help="Output directory")
-    parser.add_argument("--report-type", choices=["species", "camera", "temporal", "gps", "all"], 
+    parser.add_argument("--report-type", choices=["species", "camera", "temporal", "gps", "all"],
                        default="all", help="Type of report to generate")
     parser.add_argument("--benchmark", action="store_true", help="Run performance benchmark")
-    
+
     args = parser.parse_args()
-    
+
     # Initialize analytics engine
     engine = AnalyticsEngine()
-    
+
     # Load data
     df = engine.load_observations_from_parquet(args.parquet_path)
-    
+
     # Generate reports
     output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True)
-    
+
     if args.report_type in ["species", "all"]:
         report = engine.generate_species_report(df)
         with open(output_dir / "species_report.json", "w") as f:
             import json
             json.dump(report, f, indent=2, default=str)
         print("✅ Species report generated")
-    
+
     if args.report_type in ["camera", "all"]:
         report = engine.generate_camera_report(df)
         with open(output_dir / "camera_report.json", "w") as f:
             import json
             json.dump(report, f, indent=2, default=str)
         print("✅ Camera report generated")
-    
+
     if args.report_type in ["temporal", "all"]:
         report = engine.generate_temporal_report(df)
         with open(output_dir / "temporal_report.json", "w") as f:
             import json
             json.dump(report, f, indent=2, default=str)
         print("✅ Temporal report generated")
-    
+
     if args.report_type in ["gps", "all"]:
         report = engine.generate_gps_report(df)
         with open(output_dir / "gps_report.json", "w") as f:
             import json
             json.dump(report, f, indent=2, default=str)
         print("✅ GPS report generated")
-    
+
     # Run benchmark if requested
     if args.benchmark:
         results = engine.benchmark_performance(df)
-        print(f"\n📊 Performance Benchmark:")
+        print("\n📊 Performance Benchmark:")
         for op, time_taken in results.items():
             print(f"  {op}: {time_taken:.3f}s")
 

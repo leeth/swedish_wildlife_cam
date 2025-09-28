@@ -3,11 +3,13 @@ Core interfaces for cloud-optional wildlife detection pipeline.
 """
 
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, Union, Iterator
-from pathlib import Path
 from dataclasses import dataclass
-import json
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import builtins
 
 
 @dataclass
@@ -16,9 +18,9 @@ class StorageLocation:
     url: str  # file://, s3://, gs://
     protocol: str  # file, s3, gs
     path: str  # actual path without protocol
-    
+
     @classmethod
-    def from_url(cls, url: str) -> 'StorageLocation':
+    def from_url(cls, url: str) -> StorageLocation:
         """Parse URL into protocol and path."""
         if url.startswith('file://'):
             return cls(url=url, protocol='file', path=url[7:])
@@ -38,16 +40,16 @@ class ManifestEntry:
     crop_path: str
     camera_id: str
     timestamp: str
-    bbox: Dict[str, float]  # x1, y1, x2, y2
+    bbox: dict[str, float]  # x1, y1, x2, y2
     det_score: float
     stage1_model: str
     config_hash: str
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    image_width: Optional[int] = None
-    image_height: Optional[int] = None
-    
-    def to_dict(self) -> Dict[str, Any]:
+    latitude: float | None = None
+    longitude: float | None = None
+    image_width: int | None = None
+    image_height: int | None = None
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             'source_path': self.source_path,
@@ -63,9 +65,9 @@ class ManifestEntry:
             'image_width': self.image_width,
             'image_height': self.image_height,
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ManifestEntry':
+    def from_dict(cls, data: dict[str, Any]) -> ManifestEntry:
         """Create from dictionary."""
         return cls(**data)
 
@@ -80,8 +82,8 @@ class Stage2Entry:
     stage2_model: str
     stage1_model: str
     config_hash: str
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             'crop_path': self.crop_path,
@@ -92,36 +94,36 @@ class Stage2Entry:
             'stage1_model': self.stage1_model,
             'config_hash': self.config_hash,
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Stage2Entry':
+    def from_dict(cls, data: dict[str, Any]) -> Stage2Entry:
         """Create from dictionary."""
         return cls(**data)
 
 
 class StorageAdapter(ABC):
     """Abstract storage adapter for local/cloud storage."""
-    
+
     @abstractmethod
     def get(self, location: StorageLocation) -> bytes:
         """Get file content from storage location."""
         pass
-    
+
     @abstractmethod
     def put(self, location: StorageLocation, content: bytes) -> None:
         """Put file content to storage location."""
         pass
-    
+
     @abstractmethod
-    def list(self, location: StorageLocation, pattern: str = "*") -> List[StorageLocation]:
+    def list(self, location: StorageLocation, pattern: str = "*") -> builtins.list[StorageLocation]:
         """List files in storage location."""
         pass
-    
+
     @abstractmethod
     def exists(self, location: StorageLocation) -> bool:
         """Check if file exists."""
         pass
-    
+
     @abstractmethod
     def delete(self, location: StorageLocation) -> None:
         """Delete file from storage."""
@@ -130,17 +132,17 @@ class StorageAdapter(ABC):
 
 class QueueAdapter(ABC):
     """Abstract queue adapter for event-driven processing."""
-    
+
     @abstractmethod
-    def send_message(self, queue_name: str, message: Dict[str, Any]) -> None:
+    def send_message(self, queue_name: str, message: dict[str, Any]) -> None:
         """Send message to queue."""
         pass
-    
+
     @abstractmethod
-    def receive_messages(self, queue_name: str, max_messages: int = 10) -> List[Dict[str, Any]]:
+    def receive_messages(self, queue_name: str, max_messages: int = 10) -> list[dict[str, Any]]:
         """Receive messages from queue."""
         pass
-    
+
     @abstractmethod
     def delete_message(self, queue_name: str, message_id: str) -> None:
         """Delete message from queue."""
@@ -149,17 +151,17 @@ class QueueAdapter(ABC):
 
 class ModelProvider(ABC):
     """Abstract model provider for loading models."""
-    
+
     @abstractmethod
     def load_model(self, model_path: str) -> Any:
         """Load model from path."""
         pass
-    
+
     @abstractmethod
-    def get_model_metadata(self, model_path: str) -> Dict[str, Any]:
+    def get_model_metadata(self, model_path: str) -> dict[str, Any]:
         """Get model metadata (hash, labels, etc.)."""
         pass
-    
+
     @abstractmethod
     def get_model_hash(self, model_path: str) -> str:
         """Get model hash for versioning."""
@@ -168,31 +170,31 @@ class ModelProvider(ABC):
 
 class Runner(ABC):
     """Abstract runner for executing pipeline stages."""
-    
+
     @abstractmethod
-    def run_stage1(self, input_prefix: str, output_prefix: str, config: Dict[str, Any]) -> List[ManifestEntry]:
+    def run_stage1(self, input_prefix: str, output_prefix: str, config: dict[str, Any]) -> list[ManifestEntry]:
         """Run Stage-1 processing."""
         pass
-    
+
     @abstractmethod
-    def run_stage2(self, manifest_entries: List[ManifestEntry], output_prefix: str, config: Dict[str, Any]) -> List[Stage2Entry]:
+    def run_stage2(self, manifest_entries: list[ManifestEntry], output_prefix: str, config: dict[str, Any]) -> list[Stage2Entry]:
         """Run Stage-2 processing."""
         pass
 
 
 class PipelineConfig:
     """Pipeline configuration with profile support."""
-    
+
     def __init__(self, profile: str = "local"):
         self.profile = profile
-        self.storage_adapter: Optional[StorageAdapter] = None
-        self.queue_adapter: Optional[QueueAdapter] = None
-        self.model_provider: Optional[ModelProvider] = None
-        self.runner: Optional[Runner] = None
-        
+        self.storage_adapter: StorageAdapter | None = None
+        self.queue_adapter: QueueAdapter | None = None
+        self.model_provider: ModelProvider | None = None
+        self.runner: Runner | None = None
+
         # Load profile-specific configuration
         self._load_profile(profile)
-    
+
     def _load_profile(self, profile: str):
         """Load configuration from profile."""
         # This will be implemented to load from profiles/{profile}.yaml

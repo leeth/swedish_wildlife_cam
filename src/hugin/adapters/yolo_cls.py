@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from pathlib import Path
-from typing import List, Tuple
-from PIL import Image
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 
 @dataclass

@@ -1,16 +1,20 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 @dataclass
 class Detection:
     label: str
     confidence: float
-    bbox: Optional[List[float]] = None  # [x1,y1,x2,y2] in pixels
+    bbox: list[float] | None = None  # [x1,y1,x2,y2] in pixels
 
 class BaseDetector:
-    def predict(self, image_path: Path) -> List[Detection]:
+    def predict(self, image_path: Path) -> list[Detection]:
         raise NotImplementedError
 
 class YOLODetector(BaseDetector):
@@ -30,7 +34,7 @@ class YOLODetector(BaseDetector):
         self.conf = conf
         self.iou = iou
 
-    def predict(self, image_path: Path) -> List[Detection]:
+    def predict(self, image_path: Path) -> list[Detection]:
         results = self.model.predict(
             source=str(image_path),
             conf=self.conf,
@@ -38,7 +42,7 @@ class YOLODetector(BaseDetector):
             imgsz=1280,
             verbose=False
         )
-        dets: List[Detection] = []
+        dets: list[Detection] = []
         if not results:
             return dets
         r = results[0]

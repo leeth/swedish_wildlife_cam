@@ -3,38 +3,44 @@ Storage adapters for local and cloud storage.
 """
 
 from __future__ import annotations
-import os
+
+import contextlib
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import TYPE_CHECKING
+
 import fsspec
 import smart_open
+
 from .interfaces import StorageAdapter, StorageLocation
+
+if TYPE_CHECKING:
+    import builtins
 
 
 class LocalFSAdapter(StorageAdapter):
     """Local filesystem storage adapter."""
-    
+
     def __init__(self, base_path: str = "file://./data"):
         self.base_path = Path(base_path.replace("file://", ""))
         self.base_path.mkdir(parents=True, exist_ok=True)
-    
+
     def get(self, location: StorageLocation) -> bytes:
         """Get file content from local filesystem."""
         full_path = self.base_path / location.path
         return full_path.read_bytes()
-    
+
     def put(self, location: StorageLocation, content: bytes) -> None:
         """Put file content to local filesystem."""
         full_path = self.base_path / location.path
         full_path.parent.mkdir(parents=True, exist_ok=True)
         full_path.write_bytes(content)
-    
-    def list(self, location: StorageLocation, pattern: str = "*") -> List[StorageLocation]:
+
+    def list(self, location: StorageLocation, pattern: str = "*") -> builtins.list[StorageLocation]:
         """List files in local directory."""
         full_path = self.base_path / location.path
         if not full_path.exists():
             return []
-        
+
         files = []
         for file_path in full_path.glob(pattern):
             if file_path.is_file():
@@ -45,12 +51,12 @@ class LocalFSAdapter(StorageAdapter):
                     path=str(rel_path)
                 ))
         return files
-    
+
     def exists(self, location: StorageLocation) -> bool:
         """Check if file exists in local filesystem."""
         full_path = self.base_path / location.path
         return full_path.exists()
-    
+
     def delete(self, location: StorageLocation) -> None:
         """Delete file from local filesystem."""
         full_path = self.base_path / location.path
@@ -60,23 +66,23 @@ class LocalFSAdapter(StorageAdapter):
 
 class S3Adapter(StorageAdapter):
     """S3 storage adapter using boto3."""
-    
+
     def __init__(self, base_path: str = "s3://wildlife-detection-bucket", region: str = "eu-north-1"):
         self.base_path = base_path
         self.region = region
         self._fs = fsspec.filesystem('s3', region=region)
-    
+
     def get(self, location: StorageLocation) -> bytes:
         """Get file content from S3."""
         with smart_open.open(location.url, 'rb', transport_params={'region_name': self.region}) as f:
             return f.read()
-    
+
     def put(self, location: StorageLocation, content: bytes) -> None:
         """Put file content to S3."""
         with smart_open.open(location.url, 'wb', transport_params={'region_name': self.region}) as f:
             f.write(content)
-    
-    def list(self, location: StorageLocation, pattern: str = "*") -> List[StorageLocation]:
+
+    def list(self, location: StorageLocation, pattern: str = "*") -> builtins.list[StorageLocation]:
         """List files in S3 bucket/prefix."""
         try:
             files = self._fs.glob(f"{location.path}/{pattern}")
@@ -86,40 +92,38 @@ class S3Adapter(StorageAdapter):
             ]
         except Exception:
             return []
-    
+
     def exists(self, location: StorageLocation) -> bool:
         """Check if file exists in S3."""
         try:
             return self._fs.exists(location.path)
         except Exception:
             return False
-    
+
     def delete(self, location: StorageLocation) -> None:
         """Delete file from S3."""
-        try:
+        with contextlib.suppress(Exception):
             self._fs.rm(location.path)
-        except Exception:
-            pass
 
 
 class GCSAdapter(StorageAdapter):
     """Google Cloud Storage adapter."""
-    
+
     def __init__(self, base_path: str = "gs://wildlife-detection-bucket"):
         self.base_path = base_path
         self._fs = fsspec.filesystem('gcs')
-    
+
     def get(self, location: StorageLocation) -> bytes:
         """Get file content from GCS."""
         with smart_open.open(location.url, 'rb') as f:
             return f.read()
-    
+
     def put(self, location: StorageLocation, content: bytes) -> None:
         """Put file content to GCS."""
         with smart_open.open(location.url, 'wb') as f:
             f.write(content)
-    
-    def list(self, location: StorageLocation, pattern: str = "*") -> List[StorageLocation]:
+
+    def list(self, location: StorageLocation, pattern: str = "*") -> builtins.list[StorageLocation]:
         """List files in GCS bucket/prefix."""
         try:
             files = self._fs.glob(f"{location.path}/{pattern}")
@@ -129,20 +133,18 @@ class GCSAdapter(StorageAdapter):
             ]
         except Exception:
             return []
-    
+
     def exists(self, location: StorageLocation) -> bool:
         """Check if file exists in GCS."""
         try:
             return self._fs.exists(location.path)
         except Exception:
             return False
-    
+
     def delete(self, location: StorageLocation) -> None:
         """Delete file from GCS."""
-        try:
+        with contextlib.suppress(Exception):
             self._fs.rm(location.path)
-        except Exception:
-            pass
 
 
 def create_storage_adapter(adapter_type: str, **kwargs) -> StorageAdapter:

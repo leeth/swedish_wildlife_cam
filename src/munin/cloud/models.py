@@ -3,28 +3,30 @@ Model provider for loading and managing models.
 """
 
 from __future__ import annotations
+
 import hashlib
-import json
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
+
 import yaml
+
 from .interfaces import ModelProvider, StorageLocation
 from .storage import create_storage_adapter
 
 
 class LocalModelProvider(ModelProvider):
     """Local model provider."""
-    
+
     def __init__(self, cache_path: str = "file://./models"):
         self.cache_path = cache_path
         self.storage = create_storage_adapter("local", base_path=cache_path)
         self._model_cache = {}
-    
+
     def load_model(self, model_path: str) -> Any:
         """Load model from local path."""
         if model_path in self._model_cache:
             return self._model_cache[model_path]
-        
+
         # Load model based on file extension
         if model_path.endswith('.pt'):
             from ultralytics import YOLO
@@ -34,21 +36,21 @@ class LocalModelProvider(ModelProvider):
             model = ort.InferenceSession(model_path)
         else:
             raise ValueError(f"Unsupported model format: {model_path}")
-        
+
         self._model_cache[model_path] = model
         return model
-    
-    def get_model_metadata(self, model_path: str) -> Dict[str, Any]:
+
+    def get_model_metadata(self, model_path: str) -> dict[str, Any]:
         """Get model metadata."""
         metadata_path = model_path.replace('.pt', '_metadata.yaml').replace('.onnx', '_metadata.yaml')
-        
+
         try:
             if Path(metadata_path).exists():
-                with open(metadata_path, 'r') as f:
+                with open(metadata_path) as f:
                     return yaml.safe_load(f)
         except Exception:
             pass
-        
+
         # Default metadata
         return {
             'model_path': model_path,
@@ -57,7 +59,7 @@ class LocalModelProvider(ModelProvider):
             'input_size': (640, 640),
             'model_type': 'yolo' if model_path.endswith('.pt') else 'onnx'
         }
-    
+
     def get_model_hash(self, model_path: str) -> str:
         """Get model hash for versioning."""
         try:
@@ -66,8 +68,8 @@ class LocalModelProvider(ModelProvider):
                 return hashlib.sha256(content).hexdigest()[:16]
         except Exception:
             return "unknown"
-    
-    def _get_default_labels(self) -> Dict[str, str]:
+
+    def _get_default_labels(self) -> dict[str, str]:
         """Get default COCO labels."""
         return {
             '0': 'person', '1': 'bicycle', '2': 'car', '3': 'motorcycle', '4': 'airplane',
@@ -80,20 +82,20 @@ class LocalModelProvider(ModelProvider):
 
 class CloudModelProvider(ModelProvider):
     """Cloud model provider with caching."""
-    
+
     def __init__(self, storage_adapter, cache_path: str = "s3://wildlife-models-bucket"):
         self.storage = storage_adapter
         self.cache_path = cache_path
         self._model_cache = {}
-    
+
     def load_model(self, model_path: str) -> Any:
         """Load model from cloud storage with local caching."""
         if model_path in self._model_cache:
             return self._model_cache[model_path]
-        
+
         # Download model if not cached locally
         local_path = self._download_model(model_path)
-        
+
         # Load model
         if model_path.endswith('.pt'):
             from ultralytics import YOLO
@@ -103,36 +105,34 @@ class CloudModelProvider(ModelProvider):
             model = ort.InferenceSession(local_path)
         else:
             raise ValueError(f"Unsupported model format: {model_path}")
-        
+
         self._model_cache[model_path] = model
         return model
-    
+
     def _download_model(self, model_path: str) -> str:
         """Download model from cloud storage to local cache."""
-        import tempfile
-        import os
-        
+
         # Create local cache directory
         cache_dir = Path.home() / ".wildlife_models"
         cache_dir.mkdir(exist_ok=True)
-        
+
         # Check if already cached
         local_path = cache_dir / Path(model_path).name
         if local_path.exists():
             return str(local_path)
-        
+
         # Download from cloud
         model_location = StorageLocation.from_url(f"{self.cache_path}/{model_path}")
         content = self.storage.get(model_location)
-        
+
         # Save to local cache
         local_path.write_bytes(content)
         return str(local_path)
-    
-    def get_model_metadata(self, model_path: str) -> Dict[str, Any]:
+
+    def get_model_metadata(self, model_path: str) -> dict[str, Any]:
         """Get model metadata from cloud storage."""
         metadata_path = model_path.replace('.pt', '_metadata.yaml').replace('.onnx', '_metadata.yaml')
-        
+
         try:
             metadata_location = StorageLocation.from_url(f"{self.cache_path}/{metadata_path}")
             if self.storage.exists(metadata_location):
@@ -140,7 +140,7 @@ class CloudModelProvider(ModelProvider):
                 return yaml.safe_load(content.decode('utf-8'))
         except Exception:
             pass
-        
+
         # Default metadata
         return {
             'model_path': model_path,
@@ -149,7 +149,7 @@ class CloudModelProvider(ModelProvider):
             'input_size': (640, 640),
             'model_type': 'yolo' if model_path.endswith('.pt') else 'onnx'
         }
-    
+
     def get_model_hash(self, model_path: str) -> str:
         """Get model hash from cloud storage."""
         try:
@@ -158,8 +158,8 @@ class CloudModelProvider(ModelProvider):
             return hashlib.sha256(content).hexdigest()[:16]
         except Exception:
             return "unknown"
-    
-    def _get_default_labels(self) -> Dict[str, str]:
+
+    def _get_default_labels(self) -> dict[str, str]:
         """Get default COCO labels."""
         return {
             '0': 'person', '1': 'bicycle', '2': 'car', '3': 'motorcycle', '4': 'airplane',

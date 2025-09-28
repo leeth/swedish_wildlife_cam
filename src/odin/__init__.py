@@ -8,14 +8,14 @@ This module provides cost optimization functionality for both Munin and Hugin:
 - Stage 3 output download
 """
 
-from .manager import CostOptimizationManager
 from .batch_workflow import BatchWorkflowManager
-from .stage3_downloader import Stage3OutputDownloader
 from .config import CostOptimizationConfig
+from .manager import CostOptimizationManager
+from .stage3_downloader import Stage3OutputDownloader
 
 __all__ = [
     'CostOptimizationManager',
-    'BatchWorkflowManager', 
+    'BatchWorkflowManager',
     'Stage3OutputDownloader',
     'CostOptimizationConfig'
 ]

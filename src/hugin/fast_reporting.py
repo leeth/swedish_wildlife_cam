@@ -8,12 +8,12 @@ This module provides the most efficient reporting solution for:
 4. High-performance analytics
 """
 
-import polars as pl
-import pandas as pd
-from pathlib import Path
-from typing import Dict, List, Optional, Union, Any
-from datetime import datetime
 import logging
+from pathlib import Path
+from typing import Any, Dict, Union
+
+import polars as pl
+
 from .efficient_cluster_lookup import EfficientClusterLookup, EfficientReportingEnricher
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class FastReportingEngine:
     """
     High-performance reporting engine for large datasets.
-    
+
     Features:
     - Minimal memory overhead
     - Fast cluster name lookup
@@ -29,27 +29,27 @@ class FastReportingEngine:
     - Efficient analytics
     - Support for multiple output formats
     """
-    
+
     def __init__(self, cluster_db_path: Union[str, Path] = "cluster_names.db"):
         self.cluster_lookup = EfficientClusterLookup(cluster_db_path)
         self.enricher = EfficientReportingEnricher(self.cluster_lookup)
-    
-    def generate_cluster_report(self, data_path: Union[str, Path], 
+
+    def generate_cluster_report(self, data_path: Union[str, Path],
                               output_path: Union[str, Path],
                               format: str = "csv") -> Dict[str, Any]:
         """
         Generate cluster report from large dataset.
-        
+
         Args:
             data_path: Path to data file (CSV, Parquet, JSON)
             output_path: Output path for report
             format: Output format (csv, parquet, json)
-            
+
         Returns:
             Report statistics
         """
         data_path = Path(data_path)
-        
+
         # Load data efficiently
         if data_path.suffix == '.parquet':
             df = pl.read_parquet(data_path)
@@ -59,13 +59,13 @@ class FastReportingEngine:
             df = pl.read_json(data_path)
         else:
             raise ValueError(f"Unsupported format: {data_path.suffix}")
-        
+
         # Enrich with cluster names (fast lookup)
         enriched_df = self.cluster_lookup.enrich_dataframe_with_names(df)
-        
+
         # Generate analytics
         stats = self.enricher.generate_cluster_summary(enriched_df)
-        
+
         # Save enriched data
         output_path = Path(output_path)
         if format == "csv":
@@ -76,15 +76,15 @@ class FastReportingEngine:
             enriched_df.write_json(output_path)
         else:
             raise ValueError(f"Unsupported output format: {format}")
-        
+
         logger.info(f"Generated cluster report: {output_path}")
         return stats
-    
+
     def generate_species_by_cluster_report(self, data_path: Union[str, Path],
                                          output_path: Union[str, Path]) -> Dict[str, Any]:
         """Generate species analysis by cluster."""
         data_path = Path(data_path)
-        
+
         # Load data
         if data_path.suffix == '.parquet':
             df = pl.read_parquet(data_path)
@@ -92,10 +92,10 @@ class FastReportingEngine:
             df = pl.read_csv(data_path)
         else:
             raise ValueError(f"Unsupported format: {data_path.suffix}")
-        
+
         # Enrich with cluster names
         enriched_df = self.cluster_lookup.enrich_dataframe_with_names(df)
-        
+
         # Analyze species by cluster
         species_analysis = (
             enriched_df
@@ -108,26 +108,26 @@ class FastReportingEngine:
             ])
             .sort("count", descending=True)
         )
-        
+
         # Save results
         output_path = Path(output_path)
         species_analysis.write_csv(output_path)
-        
+
         # Generate summary
         summary = {
             "total_clusters": species_analysis["cluster_id"].n_unique(),
             "total_species": species_analysis["species"].n_unique(),
             "top_species": species_analysis.head(10).to_dicts()
         }
-        
+
         logger.info(f"Generated species by cluster report: {output_path}")
         return summary
-    
+
     def generate_temporal_analysis(self, data_path: Union[str, Path],
                                  output_path: Union[str, Path]) -> Dict[str, Any]:
         """Generate temporal analysis by cluster."""
         data_path = Path(data_path)
-        
+
         # Load data
         if data_path.suffix == '.parquet':
             df = pl.read_parquet(data_path)
@@ -135,16 +135,16 @@ class FastReportingEngine:
             df = pl.read_csv(data_path)
         else:
             raise ValueError(f"Unsupported format: {data_path.suffix}")
-        
+
         # Enrich with cluster names
         enriched_df = self.cluster_lookup.enrich_dataframe_with_names(df)
-        
+
         # Convert timestamp to datetime if needed
         if "timestamp" in enriched_df.columns:
             enriched_df = enriched_df.with_columns(
                 pl.col("timestamp").str.to_datetime().alias("datetime")
             )
-        
+
         # Temporal analysis
         temporal_analysis = (
             enriched_df
@@ -159,11 +159,11 @@ class FastReportingEngine:
             ])
             .sort(["cluster_id", "date", "hour"])
         )
-        
+
         # Save results
         output_path = Path(output_path)
         temporal_analysis.write_csv(output_path)
-        
+
         # Generate summary
         summary = {
             "date_range": {
@@ -173,15 +173,15 @@ class FastReportingEngine:
             "total_observations": temporal_analysis["observations"].sum(),
             "clusters_analyzed": temporal_analysis["cluster_id"].n_unique()
         }
-        
+
         logger.info(f"Generated temporal analysis: {output_path}")
         return summary
-    
+
     def generate_cluster_activity_report(self, data_path: Union[str, Path],
                                        output_path: Union[str, Path]) -> Dict[str, Any]:
         """Generate cluster activity patterns."""
         data_path = Path(data_path)
-        
+
         # Load data
         if data_path.suffix == '.parquet':
             df = pl.read_parquet(data_path)
@@ -189,10 +189,10 @@ class FastReportingEngine:
             df = pl.read_csv(data_path)
         else:
             raise ValueError(f"Unsupported format: {data_path.suffix}")
-        
+
         # Enrich with cluster names
         enriched_df = self.cluster_lookup.enrich_dataframe_with_names(df)
-        
+
         # Activity analysis
         activity_analysis = (
             enriched_df
@@ -212,21 +212,21 @@ class FastReportingEngine:
             ])
             .sort("total_observations", descending=True)
         )
-        
+
         # Save results
         output_path = Path(output_path)
         activity_analysis.write_csv(output_path)
-        
+
         # Generate summary
         summary = {
             "total_clusters": activity_analysis["cluster_id"].n_unique(),
             "total_observations": activity_analysis["total_observations"].sum(),
             "most_active_cluster": activity_analysis.head(1).to_dicts()[0] if len(activity_analysis) > 0 else None
         }
-        
+
         logger.info(f"Generated cluster activity report: {output_path}")
         return summary
-    
+
     def batch_enrich_files(self, input_dir: Union[str, Path],
                           output_dir: Union[str, Path],
                           pattern: str = "*.csv") -> Dict[str, Any]:
@@ -234,9 +234,9 @@ class FastReportingEngine:
         input_dir = Path(input_dir)
         output_dir = Path(output_dir)
         output_dir.mkdir(exist_ok=True)
-        
+
         results = {}
-        
+
         for file_path in input_dir.glob(pattern):
             try:
                 # Load data
@@ -246,32 +246,32 @@ class FastReportingEngine:
                     df = pl.read_csv(file_path)
                 else:
                     continue
-                
+
                 # Enrich with cluster names
                 enriched_df = self.cluster_lookup.enrich_dataframe_with_names(df)
-                
+
                 # Save enriched data
                 output_file = output_dir / f"enriched_{file_path.name}"
                 enriched_df.write_csv(output_file)
-                
+
                 results[str(file_path)] = {
                     "status": "success",
                     "output_file": str(output_file),
                     "rows": len(enriched_df)
                 }
-                
+
             except Exception as e:
                 results[str(file_path)] = {
                     "status": "error",
                     "error": str(e)
                 }
-        
+
         logger.info(f"Batch enriched {len(results)} files")
         return results
 
 
 # Convenience functions
-def fast_enrich_report(data_path: Union[str, Path], 
+def fast_enrich_report(data_path: Union[str, Path],
                       output_path: Union[str, Path],
                       cluster_db_path: Union[str, Path] = "cluster_names.db") -> Dict[str, Any]:
     """Fast report enrichment with cluster names."""

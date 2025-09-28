@@ -90,27 +90,27 @@ Issues = "https://github.com/wildlife-pipeline/wildlife-pipeline/issues"
 
 [project.scripts]
 # Odins Ravne - Main CLI
-odins-ravne = "src.wildlife_pipeline.cli:main"
+odins-ravne = "src.odin.cli:main"
 
 # Munin - Memory Keeper (Data Ingestion & Processing)
-munin-ingest = "src.wildlife_pipeline.io_optimized:main"
-munin-stage1 = "src.wildlife_pipeline.cloud.cli:main"
-munin-stage2 = "src.wildlife_pipeline.cloud.cli:main"
-munin-materialize = "src.wildlife_pipeline.cloud.cli:main"
-munin-video = "src.wildlife_pipeline.video_processor_optimized:main"
-munin-optimize = "src.wildlife_pipeline.model_optimization:main"
+munin-ingest = "src.munin.data_ingestion:main"
+munin-stage1 = "src.munin.cloud.cli:main"
+munin-stage2 = "src.munin.cloud.cli:main"
+munin-materialize = "src.munin.cloud.cli:main"
+munin-video = "src.munin.video_processor:main"
+munin-optimize = "src.munin.model_optimizer:main"
 
 # Hugin - Thought Bringer (Analysis & Insights)
-hugin-stage3 = "src.wildlife_pipeline.cloud.cli:main"
-hugin-analytics = "src.wildlife_pipeline.analytics_engine:main"
-hugin-report = "src.wildlife_pipeline.analytics_engine:main"
+hugin-stage3 = "src.hugin.cluster_cli:main"
+hugin-analytics = "src.hugin.analytics_engine:main"
+hugin-report = "src.hugin.stage3_reporting:main"
 
 # Utility Tools
-ravne-parquet-to-sqlite = "src.wildlife_pipeline.tools.parquet_to_sqlite:main"
-ravne-fix-timestamps = "scripts.image_tools.fix_camera_timestamps:main"
-ravne-location-classify = "src.wildlife_pipeline.tools.location_classifier:main"
-ravne-location-label = "src.wildlife_pipeline.tools.location_labeler:main"
-ravne-location-sync = "src.wildlife_pipeline.tools.location_sync:main"
+ravne-parquet-to-sqlite = "scripts.tools.parquet_to_sqlite:main"
+ravne-fix-timestamps = "scripts.tools.fix_camera_timestamps:main"
+ravne-location-classify = "scripts.tools.location_classifier:main"
+ravne-location-label = "scripts.tools.location_labeler:main"
+ravne-location-sync = "scripts.tools.location_sync:main"
 
 # Infrastructure
 ravne-aws-setup = "scripts.infrastructure.create_aws_test_user:main"
@@ -145,7 +145,7 @@ extend-exclude = '''
 profile = "black"
 multi_line_output = 3
 line_length = 88
-known_first_party = ["src.wildlife_pipeline"]
+known_first_party = ["src.odin", "src.munin", "src.hugin"]
 known_third_party = ["ultralytics", "opencv", "PIL", "numpy", "pandas", "pydantic"]
 
 [tool.mypy]
@@ -184,6 +184,8 @@ ignore_missing_imports = true
 [tool.ruff]
 target-version = "py38"
 line-length = 88
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -206,14 +208,15 @@ ignore = [
     "ARG005", # unused-lambda-argument
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"tests/**/*.py" = ["ARG", "S101", "TID252"]
+"test/**/*.py" = ["ARG", "S101", "TID252"]
+"**/cli.py" = ["ARG001"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --strict-markers --strict-config"
-testpaths = ["tests"]
+testpaths = ["test"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -229,7 +232,7 @@ markers = [
 [tool.coverage.run]
 source = ["src"]
 omit = [
-    "*/tests/*",
+    "*/test/*",
     "*/test_*",
     "*/__pycache__/*",
     "*/migrations/*",
@@ -251,47 +254,20 @@ exclude_lines = [
 
 [tool.pre-commit]
 repos = [
-    {
-        repo = "https://github.com/pre-commit/pre-commit-hooks",
-        rev = "v4.4.0",
-        hooks = [
-            {id = "trailing-whitespace"},
-            {id = "end-of-file-fixer"},
-            {id = "check-yaml"},
-            {id = "check-added-large-files"},
-            {id = "check-merge-conflict"},
-        ],
-    },
-    {
-        repo = "https://github.com/psf/black",
-        rev = "23.3.0",
-        hooks = [{id = "black", language_version = "python3"}],
-    },
-    {
-        repo = "https://github.com/pycqa/isort",
-        rev = "5.12.0",
-        hooks = [{id = "isort"}],
-    },
-    {
-        repo = "https://github.com/charliermarsh/ruff-pre-commit",
-        rev = "v0.0.270",
-        hooks = [
-            {id = "ruff", args = ["--fix"]},
-            {id = "ruff-format"},
-        ],
-    },
-    {
-        repo = "https://github.com/pre-commit/mirrors-mypy",
-        rev = "v1.3.0",
-        hooks = [
-            {
-                id = "mypy",
-                additional_dependencies = [
-                    "types-requests",
-                    "types-PyYAML",
-                    "types-redis",
-                ],
-            },
-        ],
-    },
+    {repo = "https://github.com/pre-commit/pre-commit-hooks", rev = "v4.4.0", hooks = [
+        {id = "trailing-whitespace"},
+        {id = "end-of-file-fixer"},
+        {id = "check-yaml"},
+        {id = "check-added-large-files"},
+        {id = "check-merge-conflict"},
+    ]},
+    {repo = "https://github.com/psf/black", rev = "23.3.0", hooks = [{id = "black", language_version = "python3"}]},
+    {repo = "https://github.com/pycqa/isort", rev = "5.12.0", hooks = [{id = "isort"}]},
+    {repo = "https://github.com/charliermarsh/ruff-pre-commit", rev = "v0.0.270", hooks = [
+        {id = "ruff", args = ["--fix"]},
+        {id = "ruff-format"},
+    ]},
+    {repo = "https://github.com/pre-commit/mirrors-mypy", rev = "v1.3.0", hooks = [
+        {id = "mypy", additional_dependencies = ["types-requests", "types-PyYAML", "types-redis"]},
+    ]},
 ]
