@@ -7,7 +7,8 @@ from tqdm import tqdm
 from PIL import Image
 
 from .config import PipelineConfig
-from .metadata import extract_exif, best_timestamp, infer_camera_id
+from .metadata import extract_exif, best_timestamp, infer_camera_id, get_gps_from_exif
+from .database import WildlifeDatabase
 from .ingest import iter_images
 from .video_processor import VideoProcessor, iter_videos
 from .detector import YOLODetector, BaseDetector, Detection
@@ -34,6 +35,10 @@ def row_from_detections(
     camera_id: str,
     ts,
     detections: List[Detection],
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    image_width: Optional[int] = None,
+    image_height: Optional[int] = None,
 ) -> Dict[str, Any]:
     observation_any = len(detections) > 0
     top_label: Optional[str] = None
@@ -43,16 +48,21 @@ def row_from_detections(
         top_label, top_conf = top.label, top.confidence
 
     obs_payload = [
-        {"label": d.label, "confidence": d.confidence, "bbox": d.bbox}
+        {"label": d.label, "confidence": d.confidence, "bbox": d.bbox, "stage": 1}
         for d in detections
     ]
 
     return {
-        "image_path": str(image_path),
+        "file_path": str(image_path),
+        "file_type": "image",
         "camera_id": camera_id,
         "timestamp": ts.isoformat(),
+        "latitude": latitude,
+        "longitude": longitude,
+        "image_width": image_width,
+        "image_height": image_height,
         "observation_any": observation_any,
-        "observations": to_json(obs_payload),
+        "detection_results": obs_payload,
         "top_label": top_label,
         "top_confidence": top_conf,
     }
@@ -60,11 +70,11 @@ def row_from_detections(
 def main():
     ap = argparse.ArgumentParser(description="Wildlife image pipeline")
     ap.add_argument("--input", required=True, help="Root folder of camera images")
-    ap.add_argument("--output", required=True, help="Output file (.csv or .parquet)")
+    ap.add_argument("--output", required=True, help="Output file (.csv, .parquet, or .db)")
     ap.add_argument("--model", required=True, help="Path to YOLO model .pt or 'megadetector' for Swedish Wildlife Detector")
     ap.add_argument("--conf-thres", type=float, default=0.35)
     ap.add_argument("--iou-thres", type=float, default=0.5)
-    ap.add_argument("--write", choices=["csv", "parquet"], default="csv")
+    ap.add_argument("--write", choices=["csv", "parquet", "sqlite"], default="csv")
     ap.add_argument("--preview", type=int, default=0, help="Preview N images then exit")
     ap.add_argument("--frame-interval", type=int, default=30, help="Extract every Nth frame from videos (default: 30)")
     ap.add_argument("--max-frames", type=int, default=100, help="Maximum frames to extract per video (default: 100)")
@@ -115,7 +125,7 @@ def main():
     image_files = list(iter_images(cfg.input_root, image_exts))
     if image_files:
         print(f"Found {len(image_files)} image files")
-        
+
         if args.preview > 0:
             from itertools import islice
             image_files = list(islice(image_files, args.preview))
@@ -125,6 +135,10 @@ def main():
             ts = best_timestamp(img_path, exif)
             camera_id = infer_camera_id(img_path, cfg.input_root)
             detections = det.predict(img_path)
+            
+            # Extract GPS coordinates
+            gps_coords = get_gps_from_exif(exif)
+            latitude, longitude = gps_coords if gps_coords else (None, None)
 
             # Stage-1: filter detections and optionally write crops
             try:
@@ -194,7 +208,11 @@ def main():
                         continue
                 observations_stage2 = to_json(obs2)
 
-            row = row_from_detections(img_path, camera_id, ts, filtered)
+            row = row_from_detections(
+                img_path, camera_id, ts, filtered,
+                latitude=latitude, longitude=longitude,
+                image_width=iw, image_height=ih
+            )
             row["stage1_dropped"] = dropped
             if manual_review:
                 row["manual_review_count"] = len(manual_review)
@@ -314,11 +332,18 @@ def main():
                                 except Exception:
                                     pass
 
+                        # Extract GPS for video (from video file if available)
+                        video_exif = extract_exif(video_path)
+                        video_gps = get_gps_from_exif(video_exif)
+                        video_lat, video_lon = video_gps if video_gps else (None, None)
+                        
                         frame_row = row_from_detections(
                             frame.image_path or video_path,
                             infer_camera_id(video_path, cfg.input_root),
                             best_timestamp(video_path, None),
                             filtered_f,
+                            latitude=video_lat, longitude=video_lon,
+                            image_width=iw, image_height=ih
                         )
                         frame_row["file_type"] = "video_frame"
                         frame_row["video_source"] = str(video_path)
@@ -334,14 +359,53 @@ def main():
             finally:
                 # Clean up temporary files
                 video_processor.cleanup_temp_files()
-    
+
     if not rows:
         print("No files found. Check --input or file extensions.")
         return
 
-    df = pd.DataFrame(rows)
     out = cfg.output_path
     out.parent.mkdir(parents=True, exist_ok=True)
+
+    if cfg.write_format == "sqlite" or out.suffix.lower() == ".db":
+        # Use SQLite database
+        db = WildlifeDatabase(out)
+        
+        for row in rows:
+            # Convert row to database format
+            detection_data = {
+                'file_path': str(row.get('file_path', '')),
+                'file_type': row.get('file_type', 'image'),
+                'camera_id': row.get('camera_id', ''),
+                'timestamp': str(row.get('timestamp', '')),
+                'latitude': row.get('latitude'),
+                'longitude': row.get('longitude'),
+                'image_width': row.get('image_width'),
+                'image_height': row.get('image_height'),
+                'stage1_dropped': row.get('stage1_dropped', 0),
+                'manual_review_count': row.get('manual_review_count', 0),
+                'observations_stage2': row.get('observations_stage2'),
+                'video_source': row.get('video_source'),
+                'frame_number': row.get('frame_number'),
+                'frame_timestamp': row.get('frame_timestamp'),
+                'detection_results': row.get('detection_results', [])
+            }
+            
+            db.insert_detection(detection_data)
+        
+        print(f"Wrote {len(rows)} detections to SQLite database: {out}")
+        
+        # Print summary statistics
+        stats = db.get_summary_stats()
+        print(f"Database summary:")
+        print(f"  Total detections: {stats['total_detections']}")
+        print(f"  Detections with GPS: {stats['gps_detections']}")
+        print(f"  Species detected: {list(stats['species_counts'].keys())}")
+        print(f"  Cameras: {list(stats['camera_counts'].keys())}")
+        
+    else:
+        # Use CSV/Parquet format
+        df = pd.DataFrame(rows)
 
     if cfg.write_format == "parquet" or out.suffix.lower() == ".parquet":
         df.to_parquet(out, index=False)

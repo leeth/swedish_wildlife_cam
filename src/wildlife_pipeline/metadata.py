@@ -1,10 +1,11 @@
 from __future__ import annotations
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from pathlib import Path
 from datetime import datetime, timezone
 import os
 from PIL import Image, ExifTags
 import exifread
+import math
 
 def _exif_from_pil(path: Path) -> Dict[str, Any]:
     try:
@@ -58,6 +59,64 @@ def extract_exif(path: Path) -> Dict[str, Any]:
     if not exif:
         exif = _exif_from_exifread(path)
     return exif or {}
+
+def get_gps_from_exif(exif: Dict[str, Any]) -> Optional[Tuple[float, float]]:
+    """
+    Extract GPS coordinates from EXIF data.
+    Returns (latitude, longitude) in decimal degrees, or None if not found.
+    """
+    if not exif:
+        return None
+    
+    # Try to get GPS data from different sources
+    gps_data = exif.get('GPSInfo') or exif.get('GPS')
+    if not gps_data:
+        return None
+    
+    try:
+        # Handle different GPS data formats
+        if isinstance(gps_data, dict):
+            # PIL format
+            lat_ref = gps_data.get(1, 'N')  # North/South
+            lat = gps_data.get(2, (0, 0, 0))  # (degrees, minutes, seconds)
+            lon_ref = gps_data.get(3, 'E')  # East/West  
+            lon = gps_data.get(4, (0, 0, 0))  # (degrees, minutes, seconds)
+        else:
+            # exifread format
+            lat_ref = gps_data.get('GPS GPSLatitudeRef', 'N')
+            lat = gps_data.get('GPS GPSLatitude', (0, 0, 0))
+            lon_ref = gps_data.get('GPS GPSLongitudeRef', 'E')
+            lon = gps_data.get('GPS GPSLongitude', (0, 0, 0))
+        
+        # Convert DMS to decimal degrees
+        def dms_to_decimal(dms_tuple, ref):
+            if not dms_tuple or len(dms_tuple) != 3:
+                return 0.0
+            
+            degrees, minutes, seconds = dms_tuple
+            if isinstance(degrees, tuple):
+                degrees = degrees[0] / degrees[1] if degrees[1] != 0 else 0
+            if isinstance(minutes, tuple):
+                minutes = minutes[0] / minutes[1] if minutes[1] != 0 else 0
+            if isinstance(seconds, tuple):
+                seconds = seconds[0] / seconds[1] if seconds[1] != 0 else 0
+            
+            decimal = degrees + minutes/60.0 + seconds/3600.0
+            if ref in ['S', 'W']:
+                decimal = -decimal
+            return decimal
+        
+        latitude = dms_to_decimal(lat, lat_ref)
+        longitude = dms_to_decimal(lon, lon_ref)
+        
+        # Validate coordinates
+        if -90 <= latitude <= 90 and -180 <= longitude <= 180:
+            return (latitude, longitude)
+        else:
+            return None
+            
+    except Exception:
+        return None
 
 def best_timestamp(path: Path, exif: Dict[str, Any]) -> datetime:
     ts = get_timestamp_from_exif(exif)
