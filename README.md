@@ -1,364 +1,215 @@
-# Odins Ravne 🐦‍⬛
+# 🐦‍⬛ Odins Ravne - Swedish Wildlife Intelligence System
 
-*"Munin brings memories home, Hugin brings thoughts to mind"*
+**Munin** (Memory Keeper) samler og bevarer vildtdata fra kameraer, mens **Hugin** (Thought Bringer) giver dyb indsigt og forståelse af dyrelivet.
 
-A production-ready, cloud-optional wildlife detection pipeline inspired by Odin's ravens from Norse mythology. Just as Munin (Memory) and Hugin (Thought) served as Odin's eyes and ears, this pipeline serves as your intelligent observer in the wild.
+## 🎯 Project Overview
 
-## The Story of Odin's Ravens
+Odins Ravne er et omfattende system til svensk vildtmonitorering der kombinerer:
+- **Munin**: Data ingestion, processing og storage (Stage 0-2)
+- **Hugin**: Analytics, insights og visualization (Stage 2+)
 
-In Norse mythology, Odin had two ravens:
-- **Munin** (Memory) - The raven who brings back memories and data from the world
-- **Hugin** (Thought) - The raven who brings back thoughts and insights
+## 🚀 Quick Start
 
-Our pipeline follows this ancient wisdom:
-
-### Munin - The Memory Keeper (Stage 0-2)
-*"Munin brings memories home"*
-- **Data Ingestion**: Collects raw camera trap data
-- **Metadata Extraction**: Preserves EXIF, GPS, and temporal information  
-- **Storage**: Safely stores memories in Parquet and manifest files
-- **Stage 1**: Detects wildlife and crops regions of interest
-- **Stage 2**: Classifies detected animals with confidence
-
-### Hugin - The Thought Bringer (Stage 2+)
-*"Hugin brings thoughts to mind"*
-- **Analysis**: Processes and interprets the collected memories
-- **Insights**: Generates patterns, trends, and behavioral analysis
-- **Reporting**: Compresses observations and creates meaningful reports
-- **Intelligence**: Provides actionable insights from the data
-
-## What Odins Ravne Does
-- Processes images and videos from camera trap data
-- Extracts metadata (EXIF + filesystem timestamps + GPS coordinates)
-- Runs a **two-stage pipeline**: Stage-1 detection + Stage-2 classification
-- Supports **local and cloud execution** with interchangeable adapters
-- Outputs structured data (Parquet + manifest files) with:
-  - `image_path`, `camera_id`, `timestamp`, `latitude`, `longitude`
-  - `observation_any` (bool), `observations` (JSON list of detections)
-  - `top_label`, `top_confidence`, `needs_review` (bool)
-  - `pipeline_version`, `model_hashes`, `source_etag`
-
-## Folder structure (input)
-
-### Images
-```
-/path/to/images/
-  camera_A/
-    2025-08-01/
-      IMG_0001.JPG
-      IMG_0002.JPG
-  camera_B/
-    IMG_1001.JPG
-```
-
-### Videos (NEW!)
-```
-/path/to/videos/
-  camera_A/
-    2025-08-01/
-      video_001.mp4
-      video_002.avi
-  camera_B/
-    video_003.mov
-```
-
-> The pipeline infers `camera_id` from the first folder below the root (e.g., `camera_A`).
-> Videos are processed by extracting frames at regular intervals for wildlife detection.
-
-## Quickstart
-
-### Local Execution
-
+### Prerequisites
 ```bash
-# 1) Create & activate venv
-python -m venv .venv
-source .venv/bin/activate
-
-# 2) Install dependencies
+# Python 3.9+
 pip install -r requirements.txt
 
-# 3) Run Munin Stage-1: Detection and cropping (Memory)
-munin-stage1 \
-  --profile local \
-  --input file://./data/images \
-  --output file://./results
-
-# 4) Run Munin Stage-2: Classification (Memory)
-munin-stage2 \
-  --profile local \
-  --manifest file://./results/stage1/manifest.jsonl \
-  --output file://./results
-
-# 5) Run Hugin Stage-3: Reporting and compression (Thought)
-hugin-stage3 \
-  --profile local \
-  --manifest file://./results/stage1/manifest.jsonl \
-  --predictions file://./results/stage2/predictions.jsonl \
-  --output file://./results
-
-# 6) Materialize results to Parquet
-munin-materialize \
-  --profile local \
-  --manifest file://./results/stage1/manifest.jsonl \
-  --output file://./results/final.parquet
+# For GPU support (optional)
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 ```
 
-### Cloud Execution (AWS)
-
+### Local Development
 ```bash
-# 1) Deploy infrastructure
-aws cloudformation create-stack \
-  --stack-name wildlife-detection \
-  --template-body file://aws/cloudformation-template.yaml
-
-# 2) Build and push Docker image
-docker build -f docker/Dockerfile.aws-gpu -t wildlife-detection:latest .
-docker push your-account.dkr.ecr.eu-north-1.amazonaws.com/wildlife-detection:latest
-
-# 3) Run Munin Stage-1: Detection with GPU acceleration (Memory)
-munin-stage1 \
-  --profile cloud \
-  --input s3://wildlife-detection-bucket/data \
-  --output s3://wildlife-detection-bucket/results
-
-# 4) Run Munin Stage-2: Classification (Memory)
-munin-stage2 \
-  --profile cloud \
-  --manifest s3://wildlife-detection-bucket/results/stage1/manifest.jsonl \
-  --output s3://wildlife-detection-bucket/results
-
-# 5) Run Hugin Stage-3: Reporting and compression (Thought)
-hugin-stage3 \
-  --profile cloud \
-  --manifest s3://wildlife-detection-bucket/results/stage1/manifest.jsonl \
-  --predictions s3://wildlife-detection-bucket/results/stage2/predictions.jsonl \
-  --output s3://wildlife-detection-bucket/results
-
-# 6) Materialize results
-munin-materialize \
-  --profile cloud \
-  --manifest s3://wildlife-detection-bucket/results/stage1/manifest.jsonl \
-  --output s3://wildlife-detection-bucket/results/final.parquet
-```
-
-## The Wisdom of Odin's Ravens
-
-### Munin - The Memory Keeper
-*"Munin brings memories home"*
-
-Munin is responsible for collecting and preserving all the raw data from your camera traps:
-
-- **Data Ingestion**: Efficiently processes thousands of images and videos
-- **Metadata Preservation**: Extracts and stores EXIF data, GPS coordinates, timestamps
-- **Quality Control**: Filters out poor quality detections and routes doubtful cases for review
-- **Storage**: Safely stores all memories in structured formats (Parquet, manifest files)
-- **Stage 1**: Detects wildlife and crops regions of interest
-- **Stage 2**: Classifies detected animals with confidence scores
-
-### Hugin - The Thought Bringer  
-*"Hugin brings thoughts to mind"*
-
-Hugin processes the memories collected by Munin and transforms them into actionable insights:
-
-- **Pattern Recognition**: Identifies behavioral patterns and movement trends
-- **Temporal Analysis**: Compresses observations to avoid duplicate logging
-- **Spatial Intelligence**: Analyzes GPS data for habitat usage patterns
-- **Reporting**: Generates comprehensive reports and analytics
-- **Insights**: Provides actionable intelligence from the collected data
-
-## Architecture
-
-### Cloud-Optional Design
-The pipeline supports both local and cloud execution through interchangeable adapters:
-
-- **Storage**: Local filesystem ↔ S3/GCS
-- **Queue**: None/Redis ↔ SQS/PubSub  
-- **Compute**: Local threads ↔ AWS Batch/Cloud Run
-- **Models**: Local cache ↔ Cloud storage
-
-### Two-Stage Pipeline
-
-**Stage-1: Detection & Filtering**
-- Runs MegaDetector or YOLO on images/videos
-- Filters detections by confidence, size, aspect ratio, edge proximity
-- Crops detected regions with padding
-- Routes doubtful detections for manual review
-- Outputs: `stage1/manifest.jsonl` + cropped images
-
-**Stage-2: Classification**
-- Runs specialized classifier on Stage-1 crops
-- Re-classifies confident detections
-- Outputs: `stage2/predictions.jsonl`
-
-**Stage-3: Reporting & Compression**
-- Compresses video observations to avoid duplicate logging
-- Groups detections within time windows (default: 10 minutes)
-- Prevents bloated logs from animals staying in frame
-- Outputs: `stage3/compressed_observations.json` + `stage3/report.json`
-
-**Materialization**
-- Combines Stage-1 and Stage-2 results
-- Outputs: `final.parquet` with complete pipeline results
-
-### Output Format
-
-**Parquet Schema:**
-```python
-{
-    'image_path': str,           # Path to original image
-    'camera_id': str,           # Camera identifier
-    'timestamp': str,           # ISO timestamp
-    'latitude': float,          # GPS latitude
-    'longitude': float,         # GPS longitude
-    'observation_any': bool,    # Any wildlife detected
-    'observations': str,        # JSON list of detections
-    'top_label': str,           # Highest confidence label
-    'top_confidence': float,    # Highest confidence score
-    'needs_review': bool,       # Manual review required
-    'pipeline_version': str,    # Pipeline version
-    'model_hashes': str,        # Model hash values
-    'source_etag': str         # Source file ETag
-}
-```
-
-## SQLite Conversion Tool
-
-Convert Parquet output to SQLite for analysis:
-
-```bash
-# Convert Parquet to SQLite
-ravne-parquet-to-sqlite \
-  --input ./results/final.parquet \
-  --output ./results/wildlife.db \
-  --table observations
-
-# Query SQLite database
-sqlite3 ./results/wildlife.db "SELECT camera_id, COUNT(*) FROM observations GROUP BY camera_id;"
-```
-
-## Configuration
-
-### Local Profile (`profiles/local.yaml`)
-```yaml
-storage:
-  adapter: "local"
-  base_path: "file://./data"
-
-queue:
-  adapter: "none"
-
-model:
-  provider: "local"
-  cache_path: "file://./models"
-
-runner:
-  type: "local"
-  max_workers: 4
-```
-
-### Cloud Profile (`profiles/cloud.yaml`)
-```yaml
-storage:
-  adapter: "s3"
-  base_path: "s3://wildlife-detection-bucket"
-
-queue:
-  adapter: "sqs"
-  region: "eu-north-1"
-
-model:
-  provider: "cloud"
-  cache_path: "s3://wildlife-models-bucket"
-
-runner:
-  type: "cloud_batch"
-  vcpu: 4
-  memory: 8192
-  gpu_count: 1
-  gpu_type: "g4dn.xlarge"
-```
-
-## Features
-
-### Swedish Wildlife Detection
-- **Optimized models**: MegaDetector + Swedish wildlife classifier
-- **Supported species**: Moose, wild boar, roe deer, red fox, badger
-- **Intelligent mapping**: Maps COCO classes to Swedish wildlife
-- **Confidence filtering**: Routes doubtful detections for manual review
-
-### Video Processing
-- **Frame extraction**: Configurable interval and max frames
-- **Supported formats**: MP4, AVI, MOV, MKV, WMV, FLV, WebM, M4V
-- **GPU acceleration**: Optimized for AWS Batch with NVIDIA GPUs
-- **Batch processing**: Process multiple videos in parallel
-
-### GPS Integration
-- **EXIF extraction**: Automatic GPS coordinate extraction
-- **Coordinate validation**: Ensures valid latitude/longitude
-- **Multiple formats**: Supports various EXIF GPS formats
-
-### Cloud Optimization
-- **GPU acceleration**: NVIDIA T4/V100 GPU support
-- **Spot instances**: 70% cost reduction with fault tolerance
-- **Auto-scaling**: Scale to zero when idle
-- **Batch processing**: Optimized for large datasets
-
-## Development
-
-### Testing
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run cloud-specific tests
-pytest tests/test_cloud_*.py -v
-
-# Run logging tests
-pytest tests/test_logging.py -v
-
-# Run with coverage
-pytest tests/ --cov=src.wildlife_pipeline --cov-report=html
-```
-
-### Logging
-The pipeline includes comprehensive logging throughout all stages:
-
-```python
-from src.wildlife_pipeline.logging_config import get_logger, setup_pipeline_logging
-
-# Setup pipeline logging
-logger = setup_pipeline_logging("INFO", log_dir=Path("./logs"))
-
-# Get module-specific logger
-stage_logger = get_logger("wildlife_pipeline.stages", "DEBUG")
-```
-
-**Logging Features:**
-- **Structured logging** with JSON context
-- **Stage-specific methods** (log_stage_start, log_stage_complete, log_stage_error)
-- **Detection statistics** (log_detection_stats)
-- **Video processing** (log_video_processing)
-- **Compression statistics** (log_compression_stats)
-- **Progress tracking** (log_processing_progress)
-- **File and console output** with configurable levels
-
-### Development Setup
-```bash
-# Install in development mode
+# Munin - Data Ingestion
+cd munin/
 pip install -e .
+munin ingest /path/to/images /path/to/output
 
-# Install development dependencies
-pip install -r requirements-dev.txt
-
-# Run linting
-flake8 src/ tests/
-black src/ tests/
+# Hugin - Analytics
+cd hugin/
+pip install -e .
+hugin analyze /path/to/data
 ```
 
-## Documentation
+### Cloud Deployment
+```bash
+# AWS Setup
+./scripts/infrastructure/deploy_aws_infrastructure.py
+./scripts/infrastructure/create_aws_test_user.py
 
-- **[Cloud-Optional Guide](CLOUD_OPTIONAL_GUIDE.md)**: Complete cloud architecture documentation
-- **[AWS GPU Deployment](AWS_GPU_DEPLOYMENT_GUIDE.md)**: AWS Batch setup with GPU optimization
-- **[Swedish Wildlife Detector](SWEDISH_WILDLIFE_DETECTOR_GUIDE.md)**: Model-specific documentation
-- **[Camera Timestamp Fix](CAMERA_TIMESTAMP_FIX_GUIDE.md)**: EXIF timestamp correction utility
-- **[GPS & SQLite Guide](GPS_SQLITE_GUIDE.md)**: GPS extraction and database integration
+# Deploy to AWS Batch
+aws batch submit-job --job-definition wildlife-pipeline
+```
+
+## 📁 Project Structure
+
+```
+├── munin/                    # Memory Keeper (Data Ingestion)
+│   ├── src/munin/           # Core Munin modules
+│   ├── pyproject.toml      # Munin dependencies
+│   └── README.md           # Munin documentation
+├── hugin/                   # Thought Bringer (Analytics)
+│   ├── src/hugin/          # Core Hugin modules
+│   ├── pyproject.toml      # Hugin dependencies
+│   └── README.md           # Hugin documentation
+├── scripts/                 # Utility scripts
+│   ├── infrastructure/     # AWS/cloud setup
+│   ├── image_tools/        # Image processing utilities
+│   └── data_upload/        # Cloud data management
+└── docs/                   # Documentation
+    ├── ROADMAP.md          # Development roadmap
+    ├── INFRASTRUCTURE.md   # Setup and deployment
+    ├── CLOUD_OPTIMIZATION.md # AWS/cloud optimization
+    └── UTILITIES.md        # Tools and utilities
+```
+
+## 🐦‍⬛ Munin (Memory Keeper)
+
+**Purpose**: Data ingestion, processing, and storage
+
+**Key Features**:
+- Swedish wildlife detection (moose, boar, roedeer, fox, badger)
+- Video frame extraction and analysis
+- EXIF metadata processing
+- GPS location classification
+- Cloud-optional architecture
+
+### 🎥 Video Processing
+- **Frame Extraction**: Extract frames from MP4, AVI, MOV, MKV videos
+- **Sampling Rate**: Configurable frame sampling (default: 0.3 seconds)
+- **Batch Processing**: Parallel video processing with multiprocessing
+- **GPU Acceleration**: CUDA-accelerated video decoding
+- **Format Support**: MP4, AVI, MOV, MKV, WebM, FLV, WMV
+
+### 🦌 Wildlife Detection Models
+
+#### **Swedish Wildlife Detector**
+- **Optimized for Swedish species**: Moose, wild boar, roedeer, red fox, badger
+- **Misclassification correction**: Automatically corrects common COCO misclassifications
+- **Species mapping**: Maps generic detections to Swedish wildlife
+- **Confidence scoring**: Calibrated confidence scores for Swedish species
+
+#### **Wildlife Detector (Generic)**
+- **YOLO-based detection**: Standard YOLOv8 object detection
+- **COCO dataset support**: All 80 COCO classes
+- **Custom model support**: Load custom trained models
+- **Batch processing**: Efficient batch inference
+
+#### **Detection Pipeline**
+```python
+# Swedish Wildlife Detection
+detector = SwedishWildlifeDetector(model_path="yolov8n.pt")
+detections = detector.predict(image_path)
+
+# Generic Wildlife Detection  
+detector = WildlifeDetector(model_path="custom_model.pt")
+detections = detector.predict(image_path)
+```
+
+**CLI Commands**:
+```bash
+munin ingest /input /output --extensions jpg,mp4
+munin process /data --stage1 --stage2
+munin upload /data --cloud aws
+```
+
+## 🧠 Hugin (Thought Bringer)
+
+**Purpose**: Analytics, insights, and visualization
+
+**Key Features**:
+- Wildlife behavior analysis
+- Population trend prediction
+- Conservation reporting
+- Interactive dashboards
+- Research data export
+
+**CLI Commands**:
+```bash
+hugin analyze /data --species moose
+hugin report /data --format pdf
+hugin dashboard /data --web
+```
+
+## 🛠️ Technology Stack
+
+### Core Technologies
+- **Python 3.9+**: Main development language
+- **PyTorch**: Machine learning framework
+- **YOLOv8**: Object detection models
+- **OpenCV**: Image/video processing
+- **FastAPI**: Web API framework
+
+### Video Processing Technologies
+- **PyAV**: High-performance video frame extraction
+- **Decord**: GPU-accelerated video decoding
+- **FFmpeg**: Video format conversion and processing
+- **CUDA**: GPU acceleration for video processing
+- **Multiprocessing**: Parallel video processing
+
+### Wildlife Detection Technologies
+- **YOLOv8**: State-of-the-art object detection
+- **Swedish Wildlife Detector**: Custom species mapping
+- **COCO Dataset**: 80-class object detection
+- **TensorRT**: GPU inference optimization
+- **ONNX**: Cross-platform model deployment
+
+### Cloud Technologies
+- **AWS**: S3, Batch, ECR, CloudFormation
+- **Docker**: Containerization
+- **Terraform**: Infrastructure as Code
+
+### Data Formats
+- **Parquet**: Columnar data storage
+- **JSONL**: Manifest files
+- **SQLite**: Local database
+- **CSV**: Export format
+
+## 📊 Current Status
+
+### ✅ Completed (Munin)
+- Core pipeline implementation (Stage 0-2)
+- Swedish wildlife detection optimization
+- Video processing with frame extraction
+- Multiple wildlife detector models
+- Cloud-optional architecture
+- AWS infrastructure setup
+- Security implementation
+- Comprehensive testing
+
+### 🚧 In Progress (Hugin)
+- Analytics framework
+- Data models and validation
+- Basic reporting capabilities
+
+### 📋 Roadmap
+See [ROADMAP.md](docs/ROADMAP.md) for detailed development plan.
+
+## 🔧 Setup & Deployment
+
+- **Local Setup**: [INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md)
+- **Cloud Optimization**: [CLOUD_OPTIMIZATION.md](docs/CLOUD_OPTIMIZATION.md)
+- **Utilities & Tools**: [UTILITIES.md](docs/UTILITIES.md)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🐦‍⬛ Odins Ravne Team
+
+- **Munin**: Memory Keeper - Data ingestion and processing
+- **Hugin**: Thought Bringer - Analytics and insights
+- **Odin**: All-Father - Overall system architecture
+
+---
+
+**Odins Ravne** - Bringing wisdom to wildlife conservation through technology.
