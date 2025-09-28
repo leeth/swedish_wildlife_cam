@@ -1,0 +1,94 @@
+# Cloud profile configuration
+storage:
+  adapter: "s3"
+  base_path: "s3://wildlife-detection-bucket"
+  region: "eu-north-1"
+  
+queue:
+  adapter: "sqs"
+  region: "eu-north-1"
+  stage1_queue: "wildlife-stage1-queue"
+  stage2_queue: "wildlife-stage2-queue"
+  
+model:
+  provider: "cloud"
+  cache_path: "s3://wildlife-models-bucket"
+  
+runner:
+  type: "cloud_batch"
+  job_definition: "wildlife-detection-job"
+  vcpu: 4
+  memory: 8192
+  gpu_count: 1
+  gpu_type: "g4dn.xlarge"  # NVIDIA T4 GPU for image processing
+  instance_types: ["g4dn.xlarge", "g4dn.2xlarge", "p3.2xlarge"]
+  
+pipeline:
+  stage1:
+    model: "megadetector"
+    conf_threshold: 0.3
+    min_rel_area: 0.003
+    max_rel_area: 0.8
+    min_aspect: 0.2
+    max_aspect: 5.0
+    edge_margin: 12
+    crop_padding: 0.15
+    batch_size: 16  # Process multiple images in GPU batch
+    image_size: 640  # Optimized for YOLO models
+    max_images_per_job: 1000  # Limit per batch job
+    
+  stage2:
+    enabled: true
+    model: "yolo_cls"
+    conf_threshold: 0.5
+    batch_size: 32  # Larger batch for classification
+    image_size: 224  # Standard for classification models
+    
+  output:
+    format: "parquet"
+    partition_by: ["dt"]
+    
+  manifest:
+    stage1_path: "stage1/manifest.jsonl"
+    stage2_path: "stage2/predictions.jsonl"
+    
+# Cloud-specific settings
+cloud:
+  aws:
+    region: "eu-north-1"
+    batch_job_queue: "wildlife-detection-queue"
+    batch_job_definition: "wildlife-detection-job"
+    # Image processing optimizations
+    image_processing:
+      gpu_enabled: true
+      cuda_version: "11.8"
+      opencv_gpu: true
+      tensorrt_optimization: true
+      mixed_precision: true
+    # Storage optimizations
+    storage:
+      s3_transfer_acceleration: true
+      multipart_threshold: "64MB"
+      max_concurrency: 10
+    # Compute optimizations
+    compute:
+      spot_instances: true
+      max_vcpus: 100
+      min_vcpus: 0
+      desired_vcpus: 10
+      job_timeout: 3600  # 1 hour timeout
+      retry_attempts: 3
+    
+  gcp:
+    project_id: "wildlife-detection-project"
+    region: "europe-north1"
+    cloud_run_service: "wildlife-detection-service"
+    # GPU configuration for Cloud Run
+    gpu:
+      type: "nvidia-tesla-t4"
+      count: 1
+    # Image processing optimizations
+    image_processing:
+      gpu_enabled: true
+      cuda_version: "11.8"
+      opencv_gpu: true

@@ -1,0 +1,92 @@
+{
+  "jobDefinitionName": "wildlife-detection-job",
+  "type": "container",
+  "platformCapabilities": ["EC2"],
+  "containerProperties": {
+    "image": "your-account.dkr.ecr.eu-north-1.amazonaws.com/wildlife-detection:latest",
+    "vcpus": 4,
+    "memory": 8192,
+    "jobRoleArn": "arn:aws:iam::your-account:role/wildlife-detection-job-role",
+    "executionRoleArn": "arn:aws:iam::your-account:role/wildlife-detection-execution-role",
+    "resourceRequirements": [
+      {
+        "type": "GPU",
+        "value": "1"
+      }
+    ],
+    "environment": [
+      {
+        "name": "CUDA_VISIBLE_DEVICES",
+        "value": "0"
+      },
+      {
+        "name": "PYTORCH_CUDA_ALLOC_CONF",
+        "value": "max_split_size_mb:512"
+      },
+      {
+        "name": "OPENCV_GPU_ENABLED",
+        "value": "1"
+      },
+      {
+        "name": "AWS_DEFAULT_REGION",
+        "value": "eu-north-1"
+      }
+    ],
+    "mountPoints": [
+      {
+        "sourceVolume": "tmp",
+        "containerPath": "/tmp",
+        "readOnly": false
+      }
+    ],
+    "volumes": [
+      {
+        "name": "tmp",
+        "host": {
+          "sourcePath": "/tmp"
+        }
+      }
+    ],
+    "ulimits": [
+      {
+        "name": "memlock",
+        "softLimit": -1,
+        "hardLimit": -1
+      },
+      {
+        "name": "stack",
+        "softLimit": 67108864,
+        "hardLimit": 67108864
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/aws/batch/wildlife-detection",
+        "awslogs-region": "eu-north-1",
+        "awslogs-stream-prefix": "batch"
+      }
+    }
+  },
+  "retryStrategy": {
+    "attempts": 3,
+    "evaluateOnExit": [
+      {
+        "action": "RETRY",
+        "onStatusReason": "GPU_ERROR"
+      },
+      {
+        "action": "RETRY",
+        "onStatusReason": "RESOURCE_REQUIREMENT"
+      }
+    ]
+  },
+  "timeout": {
+    "attemptDurationSeconds": 3600
+  },
+  "tags": {
+    "Environment": "production",
+    "Application": "wildlife-detection",
+    "GPU": "enabled"
+  }
+}

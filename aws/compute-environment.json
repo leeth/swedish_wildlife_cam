@@ -1,0 +1,45 @@
+{
+  "computeEnvironmentName": "wildlife-detection-compute",
+  "type": "MANAGED",
+  "state": "ENABLED",
+  "computeResources": {
+    "type": "EC2",
+    "minvCpus": 0,
+    "maxvCpus": 100,
+    "desiredvCpus": 10,
+    "instanceTypes": [
+      "g4dn.xlarge",
+      "g4dn.2xlarge", 
+      "g4dn.4xlarge",
+      "g4dn.8xlarge",
+      "p3.2xlarge",
+      "p3.8xlarge"
+    ],
+    "subnets": [
+      "subnet-12345678",
+      "subnet-87654321"
+    ],
+    "securityGroupIds": [
+      "sg-12345678"
+    ],
+    "instanceRole": "arn:aws:iam::your-account:instance-profile/wildlife-detection-instance-role",
+    "tags": {
+      "Environment": "production",
+      "Application": "wildlife-detection",
+      "GPU": "enabled"
+    },
+    "launchTemplate": {
+      "launchTemplateName": "wildlife-detection-template",
+      "version": "$Latest"
+    },
+    "ec2Configuration": [
+      {
+        "imageType": "ECS_AL2_NVIDIA",
+        "imageIdOverride": "ami-0c02fb55956c7d316"
+      }
+    ],
+    "bidPercentage": 70,
+    "spotIamFleetRole": "arn:aws:iam::your-account:role/aws-ec2-spot-fleet-role"
+  },
+  "serviceRole": "arn:aws:iam::your-account:role/AWSBatchServiceRole"
+}

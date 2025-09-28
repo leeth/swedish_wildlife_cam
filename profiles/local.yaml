@@ -1,0 +1,39 @@
+# Local profile configuration
+storage:
+  adapter: "local"
+  base_path: "file://./data"
+  
+queue:
+  adapter: "none"  # No queue for local batch processing
+  
+model:
+  provider: "local"
+  cache_path: "file://./models"
+  
+runner:
+  type: "local"
+  max_workers: 4
+  
+pipeline:
+  stage1:
+    model: "megadetector"
+    conf_threshold: 0.3
+    min_rel_area: 0.003
+    max_rel_area: 0.8
+    min_aspect: 0.2
+    max_aspect: 5.0
+    edge_margin: 12
+    crop_padding: 0.15
+    
+  stage2:
+    enabled: true
+    model: "yolo_cls"
+    conf_threshold: 0.5
+    
+  output:
+    format: "parquet"
+    partition_by: ["dt"]
+    
+  manifest:
+    stage1_path: "stage1/manifest.jsonl"
+    stage2_path: "stage2/predictions.jsonl"

@@ -1,0 +1,83 @@
+# AWS Batch GPU-optimized Dockerfile for wildlife detection
+FROM nvidia/cuda:11.8-devel-ubuntu20.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+ENV OPENCV_GPU_ENABLED=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.9 \
+    python3.9-dev \
+    python3-pip \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgcc-s1 \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symbolic link for python
+RUN ln -s /usr/bin/python3.9 /usr/bin/python
+
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Install PyTorch with CUDA support
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Install OpenCV with GPU support
+RUN pip install opencv-python-headless==4.8.0.76
+
+# Install other dependencies
+RUN pip install \
+    ultralytics>=8.3.0 \
+    pillow>=10.4.0 \
+    pandas>=2.2.2 \
+    pyarrow>=17.0.0 \
+    tqdm>=4.66.4 \
+    exifread>=3.0.0 \
+    PyYAML>=6.0 \
+    requests>=2.31.0 \
+    piexif>=1.1.3 \
+    fsspec>=2023.1.0 \
+    smart-open>=6.0.0 \
+    boto3>=1.26.0 \
+    s3fs>=2025.9.0 \
+    redis>=4.5.0
+
+# Install TensorRT for optimization (optional)
+RUN pip install tensorrt
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code
+COPY src/ /app/src/
+COPY profiles/ /app/profiles/
+COPY requirements.txt /app/
+
+# Install the package
+RUN pip install -e .
+
+# Create directories for data
+RUN mkdir -p /app/data /app/models /app/results
+
+# Set environment variables for image processing
+ENV BATCH_SIZE=16
+ENV IMAGE_SIZE=640
+ENV MAX_IMAGES_PER_JOB=1000
+ENV GPU_MEMORY_FRACTION=0.8
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import torch; print('GPU available:', torch.cuda.is_available())" || exit 1
+
+# Default command
+CMD ["python", "-m", "src.wildlife_pipeline.cloud.cli", "--help"]
