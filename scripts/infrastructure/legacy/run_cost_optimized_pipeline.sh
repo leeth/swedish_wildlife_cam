@@ -182,7 +182,7 @@ if [[ "$DOWNLOAD_ONLY" == true ]]; then
         --region "$REGION" \
         --environment "$ENVIRONMENT" \
         --action download-stage3 \
-        --cloud-path "s3://wildlife-detection-$ENVIRONMENT-$(aws sts get-caller-identity --query Account --output text)/output" \
+        --cloud-path "s3://wildlife-detection-$ENVIRONMENT-output/output" \
         --local-output "$LOCAL_OUTPUT"
     exit 0
 fi

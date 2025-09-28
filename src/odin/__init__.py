@@ -1,12 +1,21 @@
 """
-Odin - The All-Knowing Infrastructure Manager
+Cost Optimization Module
 
-Odin manages the entire wildlife processing world, including:
-- Infrastructure setup and teardown
-- Pipeline orchestration
-- Resource management
-- Cost optimization
+This module provides cost optimization functionality for both Munin and Hugin:
+- Infrastructure lifecycle management
+- Spot instance support with fallback
+- Batch-oriented resource management
+- Stage 3 output download
 """
 
-__version__ = "1.0.0"
-__author__ = "Wildlife Pipeline Team"
+from .manager import CostOptimizationManager
+from .batch_workflow import BatchWorkflowManager
+from .stage3_downloader import Stage3OutputDownloader
+from .config import CostOptimizationConfig
+
+__all__ = [
+    'CostOptimizationManager',
+    'BatchWorkflowManager', 
+    'Stage3OutputDownloader',
+    'CostOptimizationConfig'
+]

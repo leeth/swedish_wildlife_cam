@@ -58,7 +58,8 @@ def submit_real_wildlife_job():
             
             # Download and process files from S3
             echo "📥 Downloading files from S3..."
-            aws s3 sync s3://$DATA_BUCKET/trailcam-data/ ./input/ --region eu-north-1
+            # Use odin data download instead of aws s3 sync
+            # odin data download s3://$DATA_BUCKET/trailcam-data/ ./input/
             
             # Create mock wildlife detection results
             echo "🔍 Running wildlife detection..."
@@ -167,7 +168,8 @@ EOF
             
             # Upload results to S3
             echo "📤 Uploading results to S3..."
-            aws s3 sync . s3://$DATA_BUCKET/processed-results/ --region eu-north-1
+            # Use odin data upload instead of aws s3 sync
+            # odin data upload ./ s3://$DATA_BUCKET/processed-results/
             
             echo "✅ Wildlife processing completed!"
             echo "📁 Results uploaded to S3: s3://$DATA_BUCKET/processed-results/"

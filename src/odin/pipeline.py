@@ -4,7 +4,6 @@ Odin Pipeline Management
 Handles pipeline orchestration and execution.
 """
 
-import subprocess
 import time
 from typing import Dict, Any, List, Optional
 from .config import OdinConfig
@@ -41,20 +40,28 @@ class PipelineManager:
         try:
             print("📋 Running stage 1 (manifest)...")
             
-            # Run Munin stage 1
-            result = subprocess.run(
-                ['munin', 'cloud', 'batch', 'stage1'],
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            # Import and use Munin CLI directly
+            from ..munin.cli import main as munin_main
+            import sys
             
-            print(f"✅ Stage 1 complete: {result.stdout}")
-            return True
+            # Save original sys.argv
+            original_argv = sys.argv.copy()
             
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Stage 1 failed: {e.stderr}")
-            return False
+            # Set up Munin CLI arguments
+            sys.argv = ['munin', 'cloud', 'batch', 'stage1']
+            
+            try:
+                # Run Munin stage 1
+                munin_main()
+                result = True
+            except SystemExit as e:
+                result = e.code == 0
+            finally:
+                # Restore original sys.argv
+                sys.argv = original_argv
+            
+            print(f"✅ Stage 1 complete")
+            return result
         except Exception as e:
             print(f"❌ Stage 1 failed: {e}")
             return False
@@ -64,20 +71,28 @@ class PipelineManager:
         try:
             print("🔍 Running stage 2 (detection)...")
             
-            # Run Munin stage 2
-            result = subprocess.run(
-                ['munin', 'cloud', 'batch', 'stage2'],
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            # Import and use Munin CLI directly
+            from ..munin.cli import main as munin_main
+            import sys
             
-            print(f"✅ Stage 2 complete: {result.stdout}")
-            return True
+            # Save original sys.argv
+            original_argv = sys.argv.copy()
             
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Stage 2 failed: {e.stderr}")
-            return False
+            # Set up Munin CLI arguments
+            sys.argv = ['munin', 'cloud', 'batch', 'stage2']
+            
+            try:
+                # Run Munin stage 2
+                munin_main()
+                result = True
+            except SystemExit as e:
+                result = e.code == 0
+            finally:
+                # Restore original sys.argv
+                sys.argv = original_argv
+            
+            print(f"✅ Stage 2 complete")
+            return result
         except Exception as e:
             print(f"❌ Stage 2 failed: {e}")
             return False
@@ -87,20 +102,28 @@ class PipelineManager:
         try:
             print("📊 Running stage 3 (reporting)...")
             
-            # Run Munin stage 3
-            result = subprocess.run(
-                ['munin', 'cloud', 'batch', 'stage3'],
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            # Import and use Munin CLI directly
+            from ..munin.cli import main as munin_main
+            import sys
             
-            print(f"✅ Stage 3 complete: {result.stdout}")
-            return True
+            # Save original sys.argv
+            original_argv = sys.argv.copy()
             
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Stage 3 failed: {e.stderr}")
-            return False
+            # Set up Munin CLI arguments
+            sys.argv = ['munin', 'cloud', 'batch', 'stage3']
+            
+            try:
+                # Run Munin stage 3
+                munin_main()
+                result = True
+            except SystemExit as e:
+                result = e.code == 0
+            finally:
+                # Restore original sys.argv
+                sys.argv = original_argv
+            
+            print(f"✅ Stage 3 complete")
+            return result
         except Exception as e:
             print(f"❌ Stage 3 failed: {e}")
             return False

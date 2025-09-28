@@ -12,17 +12,20 @@ python --version
 # Git
 git --version
 
-# Docker (for cloud deployment)
-docker --version
+# Odin CLI (for infrastructure management)
+odin --version
 
-# AWS CLI (for cloud deployment)
-aws --version
+# Munin CLI (for data processing)
+munin --version
+
+# Hugin CLI (for analytics)
+hugin --version
 ```
 
 ### AWS Setup
 ```bash
-# Configure AWS CLI
-aws configure
+# Configure Odin
+odin config setup
 
 # Deploy infrastructure
 ./scripts/infrastructure/deploy_aws_infrastructure.py
@@ -127,8 +130,8 @@ reporting:
 
 ### AWS Setup
 ```bash
-# Configure AWS CLI
-aws configure
+# Configure Odin
+odin config setup
 
 # Deploy infrastructure
 ./scripts/infrastructure/deploy_aws_infrastructure.py
@@ -166,24 +169,18 @@ models:
 
 ### Build Images
 ```bash
-# Build Munin image
-cd munin/
-docker build -t odins-ravne/munin:latest .
-
-# Build Hugin image
-cd ../hugin/
-docker build -t odins-ravne/hugin:latest .
+# Build images using Odin
+odin infrastructure build --component munin
+odin infrastructure build --component hugin
 ```
 
 ### Run Containers
 ```bash
 # Run Munin
-docker run -v /path/to/data:/data odins-ravne/munin:latest \
-  munin ingest /data/input /data/output
+munin ingest /path/to/data/input /path/to/data/output
 
 # Run Hugin
-docker run -v /path/to/data:/data odins-ravne/hugin:latest \
-  hugin analyze /data
+hugin analyze /path/to/data
 ```
 
 ## 🔧 Development Environment

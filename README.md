@@ -89,7 +89,7 @@ hugin analyze /path/to/data
 ./scripts/infrastructure/create_aws_test_user.py
 
 # Deploy to AWS Batch
-aws batch submit-job --job-definition wildlife-pipeline
+odin batch --input s3://your-bucket/input --output s3://your-bucket/output
 ```
 
 ## 📁 Projekt Struktur

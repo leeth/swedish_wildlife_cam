@@ -118,14 +118,25 @@ class LocalInfrastructureManager:
         """Start Docker services."""
         print("🐳 Starting Docker services...")
         
-        # Start services using docker-compose
-        import subprocess
-        result = subprocess.run([
-            'docker-compose', '-f', 'docker-compose.local.yml', 'up', '-d'
-        ], capture_output=True, text=True)
+        # Start services using odin CLI
+        from .cli import main as odin_main
+        import sys
         
-        if result.returncode != 0:
-            raise Exception(f"Failed to start Docker services: {result.stderr}")
+        # Save original sys.argv
+        original_argv = sys.argv.copy()
+        
+        # Set up odin CLI arguments for infrastructure setup
+        sys.argv = ['odin', 'infrastructure', 'setup']
+        
+        try:
+            # Run odin infrastructure setup
+            odin_main()
+        except SystemExit as e:
+            if e.code != 0:
+                raise Exception(f"Failed to start infrastructure: exit code {e.code}")
+        finally:
+            # Restore original sys.argv
+            sys.argv = original_argv
     
     def _wait_for_services(self) -> None:
         """Wait for services to be ready."""
@@ -197,49 +208,97 @@ class LocalInfrastructureManager:
         """Stop Docker services."""
         print("🛑 Stopping Docker services...")
         
-        import subprocess
-        result = subprocess.run([
-            'docker-compose', '-f', 'docker-compose.local.yml', 'down'
-        ], capture_output=True, text=True)
+        # Stop services using odin CLI
+        from .cli import main as odin_main
+        import sys
         
-        if result.returncode != 0:
-            print(f"Warning: Failed to stop Docker services: {result.stderr}")
+        # Save original sys.argv
+        original_argv = sys.argv.copy()
+        
+        # Set up odin CLI arguments for infrastructure teardown
+        sys.argv = ['odin', 'infrastructure', 'teardown']
+        
+        try:
+            # Run odin infrastructure teardown
+            odin_main()
+        except SystemExit as e:
+            if e.code != 0:
+                print(f"Warning: Failed to stop infrastructure: exit code {e.code}")
+        finally:
+            # Restore original sys.argv
+            sys.argv = original_argv
     
     def _cleanup_volumes(self) -> None:
         """Clean up Docker volumes."""
         print("🧹 Cleaning up volumes...")
         
-        import subprocess
-        result = subprocess.run([
-            'docker-compose', '-f', 'docker-compose.local.yml', 'down', '-v'
-        ], capture_output=True, text=True)
+        # Cleanup volumes using odin CLI
+        from .cli import main as odin_main
+        import sys
         
-        if result.returncode != 0:
-            print(f"Warning: Failed to cleanup volumes: {result.stderr}")
+        # Save original sys.argv
+        original_argv = sys.argv.copy()
+        
+        # Set up odin CLI arguments for infrastructure cleanup
+        sys.argv = ['odin', 'infrastructure', 'teardown', '--cleanup']
+        
+        try:
+            # Run odin infrastructure cleanup
+            odin_main()
+        except SystemExit as e:
+            if e.code != 0:
+                print(f"Warning: Failed to cleanup infrastructure: exit code {e.code}")
+        finally:
+            # Restore original sys.argv
+            sys.argv = original_argv
     
     def _scale_docker_services(self) -> None:
         """Scale up Docker services."""
         print("📈 Scaling up Docker services...")
         
-        import subprocess
-        result = subprocess.run([
-            'docker-compose', '-f', 'docker-compose.local.yml', 'up', '-d', '--scale', 'wildlife-worker=2'
-        ], capture_output=True, text=True)
+        # Scale up services using odin CLI
+        from .cli import main as odin_main
+        import sys
         
-        if result.returncode != 0:
-            print(f"Warning: Failed to scale up services: {result.stderr}")
+        # Save original sys.argv
+        original_argv = sys.argv.copy()
+        
+        # Set up odin CLI arguments for infrastructure scale-up
+        sys.argv = ['odin', 'infrastructure', 'scale-up']
+        
+        try:
+            # Run odin infrastructure scale-up
+            odin_main()
+        except SystemExit as e:
+            if e.code != 0:
+                print(f"Warning: Failed to scale up infrastructure: exit code {e.code}")
+        finally:
+            # Restore original sys.argv
+            sys.argv = original_argv
     
     def _scale_down_docker_services(self) -> None:
         """Scale down Docker services."""
         print("📉 Scaling down Docker services...")
         
-        import subprocess
-        result = subprocess.run([
-            'docker-compose', '-f', 'docker-compose.local.yml', 'up', '-d', '--scale', 'wildlife-worker=0'
-        ], capture_output=True, text=True)
+        # Scale down services using odin CLI
+        from .cli import main as odin_main
+        import sys
         
-        if result.returncode != 0:
-            print(f"Warning: Failed to scale down services: {result.stderr}")
+        # Save original sys.argv
+        original_argv = sys.argv.copy()
+        
+        # Set up odin CLI arguments for infrastructure scale-down
+        sys.argv = ['odin', 'infrastructure', 'scale-down']
+        
+        try:
+            # Run odin infrastructure scale-down
+            odin_main()
+        except SystemExit as e:
+            if e.code != 0:
+                print(f"Warning: Failed to scale down infrastructure: exit code {e.code}")
+        finally:
+            # Restore original sys.argv
+            sys.argv = original_argv
     
     def _create_s3_bucket(self) -> None:
         """Create S3 bucket in LocalStack."""

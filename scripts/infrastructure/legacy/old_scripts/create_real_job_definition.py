@@ -53,7 +53,8 @@ def create_real_job_definition():
                     
                     # Download files from S3
                     echo "📥 Downloading files from S3..."
-                    aws s3 sync s3://$DATA_BUCKET/trailcam-data/ ./input/ --region eu-north-1
+                    # Use odin data download instead of aws s3 sync
+                    # odin data download s3://$DATA_BUCKET/trailcam-data/ ./input/
                     
                     # Process images
                     echo "🔍 Processing images..."
@@ -141,7 +142,8 @@ EOF
                     
                     # Upload results
                     echo "📤 Uploading results to S3..."
-                    aws s3 sync . s3://$DATA_BUCKET/processed-results/ --region eu-north-1
+                    # Use odin data upload instead of aws s3 sync
+                    # odin data upload ./ s3://$DATA_BUCKET/processed-results/
                     
                     echo "✅ Wildlife processing completed!"
                     echo "📁 Results uploaded to S3"
@@ -218,7 +220,7 @@ def main():
     print(f"\n🎉 Real wildlife job submitted!")
     print(f"📋 Job ID: {job_id}")
     print(f"📊 This will create actual output files!")
-    print(f"⏳ Monitor with: aws batch describe-jobs --jobs {job_id}")
+    print(f"⏳ Monitor with: odin infrastructure status --job-id {job_id}")
 
 if __name__ == "__main__":
     import time

@@ -1,0 +1,26 @@
+# GPS Cluster Configuration
+
+# Database settings
+db_path: "clusters.db"
+
+# Clustering parameters
+clustering:
+  radius_meters: 5.0
+  min_points: 2
+  max_clusters: 1000
+
+# Export settings
+export:
+  formats: ["csv", "json", "geojson"]
+  output_dir: "outputs"
+  
+# Analytics settings
+analytics:
+  enable_temporal_analysis: true
+  enable_species_analysis: true
+  enable_cluster_analysis: true
+
+# Logging
+logging:
+  level: "INFO"
+  file: "cluster.log"

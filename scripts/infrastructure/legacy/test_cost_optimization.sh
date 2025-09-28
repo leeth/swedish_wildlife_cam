@@ -112,7 +112,7 @@ python src/cost_optimization/cli.py \
     --verbose \
     batch \
     --input "file://$TEST_DATA_DIR" \
-    --output "s3://wildlife-detection-$ENVIRONMENT-$(aws sts get-caller-identity --query Account --output text)/test_output" \
+    --output "s3://wildlife-detection-$ENVIRONMENT-test/test_output" \
     --local-output "$LOCAL_OUTPUT_DIR" \
     --job-count 1 \
     --gpu-required \
@@ -136,7 +136,7 @@ python src/cost_optimization/cli.py \
     --environment "$ENVIRONMENT" \
     --verbose \
     stage3 download \
-    --cloud-path "s3://wildlife-detection-$ENVIRONMENT-$(aws sts get-caller-identity --query Account --output text)/test_output" \
+    --cloud-path "s3://wildlife-detection-$ENVIRONMENT-test/test_output" \
     --local-path "$LOCAL_OUTPUT_DIR" \
     --summary \
     --create-runner

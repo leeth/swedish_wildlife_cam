@@ -1,134 +1,126 @@
 """
-Odin Configuration Management
+Cost Optimization Configuration
 
-Handles loading and managing Odin configuration from YAML files.
+This module provides configuration management for cost optimization features.
 """
 
+from dataclasses import dataclass
+from typing import Dict, Any, Optional
 import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional
 
 
-class OdinConfig:
-    """Odin configuration manager."""
+@dataclass
+class CostOptimizationConfig:
+    """Configuration for cost optimization features."""
     
-    def __init__(self, config_path: Path):
-        """Initialize configuration from file."""
-        self.config_path = config_path
-        self.config = self.load_config()
+    # AWS Configuration
+    region: str = "eu-north-1"
+    environment: str = "production"
     
-    def load_config(self) -> Dict[str, Any]:
+    # Spot Instance Configuration
+    spot_bid_percentage: int = 70
+    spot_fallback_timeout: int = 300  # 5 minutes
+    max_retry_attempts: int = 3
+    
+    # Infrastructure Configuration
+    max_vcpus: int = 100
+    min_vcpus: int = 0
+    desired_vcpus: int = 0  # Scale to zero when idle
+    gpu_required: bool = True
+    
+    # Batch Processing Configuration
+    max_parallel_jobs: int = 10
+    cost_threshold_percentage: float = 0.5  # 50% savings threshold
+    
+    # Stage 3 Configuration
+    download_stage3: bool = True
+    create_local_runner: bool = True
+    compression_window_minutes: int = 10
+    min_confidence: float = 0.5
+    min_duration_seconds: float = 5.0
+    
+    # Cost Monitoring
+    cost_reporting: bool = True
+    cost_monitoring: bool = True
+    
+    @classmethod
+    def from_file(cls, config_path: str) -> 'CostOptimizationConfig':
         """Load configuration from YAML file."""
-        try:
-            with open(self.config_path, 'r') as f:
-                return yaml.safe_load(f)
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML configuration: {e}")
-    
-    def get(self, key: str, default: Any = None) -> Any:
-        """Get configuration value by key."""
-        keys = key.split('.')
-        value = self.config
+        config_path = Path(config_path)
+        if not config_path.exists():
+            raise FileNotFoundError(f"Configuration file not found: {config_path}")
         
-        for k in keys:
-            if isinstance(value, dict) and k in value:
-                value = value[k]
-            else:
-                return default
+        with open(config_path, 'r') as f:
+            config_data = yaml.safe_load(f)
         
-        return value
+        return cls(**config_data.get('cost_optimization', {}))
     
-    def set(self, key: str, value: Any) -> None:
-        """Set configuration value by key."""
-        keys = key.split('.')
-        config = self.config
+    @classmethod
+    def from_dict(cls, config_dict: Dict[str, Any]) -> 'CostOptimizationConfig':
+        """Create configuration from dictionary."""
+        return cls(**config_dict)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary."""
+        return {
+            'region': self.region,
+            'environment': self.environment,
+            'spot_bid_percentage': self.spot_bid_percentage,
+            'spot_fallback_timeout': self.spot_fallback_timeout,
+            'max_retry_attempts': self.max_retry_attempts,
+            'max_vcpus': self.max_vcpus,
+            'min_vcpus': self.min_vcpus,
+            'desired_vcpus': self.desired_vcpus,
+            'gpu_required': self.gpu_required,
+            'max_parallel_jobs': self.max_parallel_jobs,
+            'cost_threshold_percentage': self.cost_threshold_percentage,
+            'download_stage3': self.download_stage3,
+            'create_local_runner': self.create_local_runner,
+            'compression_window_minutes': self.compression_window_minutes,
+            'min_confidence': self.min_confidence,
+            'min_duration_seconds': self.min_duration_seconds,
+            'cost_reporting': self.cost_reporting,
+            'cost_monitoring': self.cost_monitoring
+        }
+    
+    def save_to_file(self, config_path: str) -> None:
+        """Save configuration to YAML file."""
+        config_path = Path(config_path)
+        config_path.parent.mkdir(parents=True, exist_ok=True)
         
-        for k in keys[:-1]:
-            if k not in config:
-                config[k] = {}
-            config = config[k]
+        config_data = {
+            'cost_optimization': self.to_dict()
+        }
         
-        config[keys[-1]] = value
+        with open(config_path, 'w') as f:
+            yaml.dump(config_data, f, default_flow_style=False, indent=2)
     
-    def get_region(self) -> str:
-        """Get AWS region."""
-        return self.get('infrastructure.region', 'eu-north-1')
+    def update(self, **kwargs) -> None:
+        """Update configuration with new values."""
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
     
-    def set_region(self, region: str) -> None:
-        """Set AWS region."""
-        self.set('infrastructure.region', region)
-    
-    def get_bucket_name(self) -> str:
-        """Get S3 bucket name."""
-        return self.get('storage.s3_bucket', 'wildlife-pipeline-data')
-    
-    def get_stack_name(self) -> str:
-        """Get CloudFormation stack name."""
-        return self.get('infrastructure.stack_name', 'wildlife-odin-infrastructure')
-    
-    def get_compute_environment_name(self) -> str:
-        """Get AWS Batch compute environment name."""
-        return self.get('infrastructure.batch.compute_environment.name', 'wildlife-compute-production')
-    
-    def get_job_queue_name(self) -> str:
-        """Get AWS Batch job queue name."""
-        return self.get('infrastructure.batch.job_queue.name', 'wildlife-queue-production')
-    
-    def get_instance_types(self) -> list:
-        """Get instance types for compute environment."""
-        return self.get('infrastructure.batch.compute_environment.instance_types', ['m5.large', 'm5.xlarge'])
-    
-    def get_min_vcpus(self) -> int:
-        """Get minimum vCPUs for compute environment."""
-        return self.get('infrastructure.batch.compute_environment.min_vcpus', 0)
-    
-    def get_max_vcpus(self) -> int:
-        """Get maximum vCPUs for compute environment."""
-        return self.get('infrastructure.batch.compute_environment.max_vcpus', 8)
-    
-    def get_desired_vcpus(self) -> int:
-        """Get desired vCPUs for compute environment."""
-        return self.get('infrastructure.batch.compute_environment.desired_vcpus', 0)
-    
-    def get_subnets(self) -> list:
-        """Get subnet IDs for compute environment."""
-        return self.get('infrastructure.batch.compute_environment.subnets', [])
-    
-    def get_security_groups(self) -> list:
-        """Get security group IDs for compute environment."""
-        return self.get('infrastructure.batch.compute_environment.security_groups', [])
-    
-    def get_instance_role(self) -> str:
-        """Get instance role ARN for compute environment."""
-        return self.get('infrastructure.batch.compute_environment.instance_role', '')
-    
-    def get_service_role(self) -> str:
-        """Get service role ARN for compute environment."""
-        return self.get('infrastructure.batch.compute_environment.service_role', '')
-    
-    def get_job_definitions(self) -> Dict[str, Any]:
-        """Get job definitions configuration."""
-        return self.get('infrastructure.batch.job_definitions', {})
-    
-    def get_pipeline_stages(self) -> Dict[str, Any]:
-        """Get pipeline stages configuration."""
-        return self.get('pipeline.stages', {})
-    
-    def get_storage_prefixes(self) -> Dict[str, str]:
-        """Get storage prefixes configuration."""
-        return self.get('storage.prefixes', {})
-    
-    def is_cost_optimized(self) -> bool:
-        """Check if cost optimization is enabled."""
-        return self.get('infrastructure.cost_optimized', True)
-    
-    def get_provider(self) -> str:
-        """Get cloud provider."""
-        return self.get('infrastructure.provider', 'aws')
-    
-    def save(self) -> None:
-        """Save configuration to file."""
-        with open(self.config_path, 'w') as f:
-            yaml.dump(self.config, f, default_flow_style=False, indent=2)
+    def validate(self) -> None:
+        """Validate configuration values."""
+        if not 0 <= self.spot_bid_percentage <= 100:
+            raise ValueError("Spot bid percentage must be between 0 and 100")
+        
+        if self.max_vcpus < self.min_vcpus:
+            raise ValueError("Max vCPUs must be greater than or equal to min vCPUs")
+        
+        if self.desired_vcpus < self.min_vcpus or self.desired_vcpus > self.max_vcpus:
+            raise ValueError("Desired vCPUs must be between min and max vCPUs")
+        
+        if not 0 <= self.cost_threshold_percentage <= 1:
+            raise ValueError("Cost threshold percentage must be between 0 and 1")
+        
+        if self.compression_window_minutes <= 0:
+            raise ValueError("Compression window must be positive")
+        
+        if not 0 <= self.min_confidence <= 1:
+            raise ValueError("Min confidence must be between 0 and 1")
+        
+        if self.min_duration_seconds < 0:
+            raise ValueError("Min duration must be non-negative")
