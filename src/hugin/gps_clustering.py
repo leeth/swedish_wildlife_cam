@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from common.core.base import BaseProcessor
 from common.exceptions import ProcessingError, ValidationError
 from common.utils.logging_utils import get_logger, ProcessingTimer
+from common.utils.gps_utils import calculate_distance_meters
 from .data_models import (
     ClusterBoundary,
     GPSCluster,
@@ -117,20 +118,6 @@ class GPSClusterManager(BaseProcessor):
 
             conn.commit()
 
-    def _calculate_distance(self, lat1: float, lon1: float,
-                          lat2: float, lon2: float) -> float:
-        """Calculate distance between two GPS coordinates in meters using Haversine formula."""
-        # Convert to radians
-        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-
-        # Haversine formula
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
-        c = 2 * math.asin(math.sqrt(a))
-        r = 6371000  # Earth radius in meters
-
-        return c * r
 
     def _find_nearby_cluster(self, latitude: float, longitude: float) -> Optional[GPSCluster]:
         """Find existing cluster within radius of given coordinates."""
@@ -144,7 +131,7 @@ class GPSClusterManager(BaseProcessor):
 
             for cluster_row in clusters:
                 cluster = GPSCluster(**dict(cluster_row))
-                distance = self._calculate_distance(
+                distance = calculate_distance_meters(
                     latitude, longitude,
                     cluster.center_latitude, cluster.center_longitude
                 )
