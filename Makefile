@@ -1,6 +1,6 @@
 # Wildlife Pipeline Makefile
 
-.PHONY: help up-localstack down-localstack deploy-local run-local destroy-local deploy-aws run-aws build-docker test-local
+.PHONY: help up-localstack down-localstack deploy-local run-local destroy-local deploy-aws run-aws build-docker test-local doctor-local
 
 # Default target
 help:
@@ -12,6 +12,7 @@ help:
 	@echo "  deploy-local       - Deploy to LocalStack"
 	@echo "  run-local          - Run pipeline in LocalStack"
 	@echo "  destroy-local      - Clean up LocalStack resources"
+	@echo "  doctor-local       - Sanity check LocalStack services"
 	@echo ""
 	@echo "AWS Production:"
 	@echo "  deploy-aws         - Deploy to AWS"
@@ -96,6 +97,29 @@ setup-dev:
 	pip install -r requirements.txt
 	pip install awscli-local
 	@echo "✅ Development environment ready!"
+
+# Doctor - Sanity check LocalStack services
+doctor-local:
+	@echo "🩺 Checking LocalStack services..."
+	@echo "📊 LocalStack version:"
+	@awslocal --version || echo "❌ awslocal not found"
+	@echo ""
+	@echo "🔍 Step Functions:"
+	@awslocal stepfunctions list-state-machines --region=eu-north-1 || echo "❌ Step Functions not available"
+	@echo ""
+	@echo "🔍 Lambda:"
+	@awslocal lambda list-functions --region=eu-north-1 || echo "❌ Lambda not available"
+	@echo ""
+	@echo "🔍 Batch:"
+	@awslocal batch describe-job-queues --region=eu-north-1 || echo "❌ Batch not available"
+	@echo ""
+	@echo "🔍 S3:"
+	@awslocal s3 ls --region=eu-north-1 || echo "❌ S3 not available"
+	@echo ""
+	@echo "🔍 CloudWatch Logs:"
+	@awslocal logs describe-log-groups --region=eu-north-1 || echo "❌ CloudWatch Logs not available"
+	@echo ""
+	@echo "✅ LocalStack health check completed!"
 
 # Clean up
 clean:

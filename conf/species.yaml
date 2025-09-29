@@ -72,3 +72,4 @@ output_format:
   include_confidence_score: true
   include_detection_metadata: true
   save_cropped_images: false
+

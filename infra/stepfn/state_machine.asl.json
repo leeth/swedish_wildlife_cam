@@ -1,7 +1,29 @@
 {
   "Comment": "Wildlife pipeline: budget-guarded manual workflow with weather enrichment",
-  "StartAt": "GuardBudget",
+  "StartAt": "GuardInputs",
   "States": {
+    "GuardInputs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "${GuardInputsLambdaArn}",
+        "Payload.$": "$"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": ["InvalidInput"],
+          "ResultPath": "$.error",
+          "Next": "FailInput"
+        }
+      ],
+      "Next": "GuardBudget"
+    },
+    "FailInput": {
+      "Type": "Fail",
+      "Error": "InvalidInput",
+      "Cause": "Input validation failed"
+    },
     "GuardBudget": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
@@ -68,7 +90,11 @@
           ]
         },
         "RetryStrategy": {
-          "Attempts": 1
+          "Attempts": 2,
+          "EvaluateOnExit": {
+            "OnError": "RETRY",
+            "OnExitCode": "RETRY"
+          }
         },
         "Timeout": {
           "AttemptDurationSeconds.$": "$.max_job_duration"
