@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..logging_config import get_logger
+from ...common.utils.logging_utils import get_logger
 
 if TYPE_CHECKING:
     from .interfaces import ManifestEntry, Stage2Entry

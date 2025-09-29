@@ -33,7 +33,7 @@ except ImportError:
     TRT_AVAILABLE = False
     print("⚠️  TensorRT not available. Install with: pip install tensorrt")
 
-from ..logging_config import get_logger
+from ..common.utils.logging_utils import get_logger
 
 logger = get_logger("wildlife_pipeline.model_optimization")
 

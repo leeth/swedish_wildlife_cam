@@ -15,8 +15,8 @@ from .swedish_wildlife_detector import SwedishWildlifeDetector
 from .classification_engine import YOLOClassifier
 from .model_optimizer import ModelOptimizer
 from .storage_manager import WildlifeDatabase
-from .exif_extractor import EXIFExtractor
-from .detection_filter import DetectionFilter
+# from .exif_extractor import EXIFExtractor  # No class, only functions
+# from .detection_filter import DetectionFilter  # No class, only functions
 
 __all__ = [
     "OptimizedFileWalker",
@@ -28,6 +28,6 @@ __all__ = [
     "YOLOClassifier",
     "ModelOptimizer",
     "WildlifeDatabase",
-    "EXIFExtractor",
-    "DetectionFilter",
+    # "EXIFExtractor",  # No class, only functions
+    # "DetectionFilter",  # No class, only functions
 ]

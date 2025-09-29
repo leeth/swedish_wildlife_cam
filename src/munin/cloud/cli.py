@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ..logging_config import get_logger
+from ...common.utils.logging_utils import get_logger
 from .config import CloudConfig
 from .interfaces import ManifestEntry, Stage2Entry
 from .stage3_reporting import Stage3Reporter
