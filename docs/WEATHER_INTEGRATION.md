@@ -1,31 +1,32 @@
 # Weather Data Integration for Munin
 
-This document describes the weather data integration system for enriching wildlife observations with historical weather data using YR.no (Norwegian Meteorological Institute) API.
+This document describes the weather data integration system for enriching positive wildlife observations with historical weather data using YR.no (Norwegian Meteorological Institute) API.
 
 ## Overview
 
-The weather integration system enriches GPS clusters with historical weather observations, providing environmental context for wildlife monitoring data. This is particularly useful for:
+The weather integration system enriches individual positive wildlife observations (those with animals detected) with historical weather data at their specific time and location. This targeted approach is more efficient and provides precise environmental context for wildlife monitoring data. This is particularly useful for:
 
-- Correlating wildlife behavior with weather conditions
-- Understanding seasonal patterns in wildlife activity
+- Correlating wildlife behavior with weather conditions at the exact time of observation
+- Understanding how weather affects wildlife activity patterns
 - Analyzing the impact of weather on camera trap effectiveness
-- Providing environmental context for wildlife observations
+- Providing precise environmental context for wildlife observations
+- Enriching only meaningful observations (positive detections) rather than all data
 
 ## Architecture
 
 ### Components
 
-1. **YRWeatherEnricher** - Main weather data enrichment class
-2. **Weather Integration CLI** - Command-line interface for weather operations
-3. **Database Schema** - SQLite tables for weather data storage
+1. **ObservationWeatherEnricher** - Main weather data enrichment class for individual observations
+2. **Observation Weather CLI** - Command-line interface for weather operations
+3. **Database Schema** - SQLite tables for weather data storage linked to observations
 4. **Caching System** - API response caching for performance
 
 ### Data Flow
 
 ```
-GPS Clusters → Weather Enricher → YR.no API → Weather Database
+Positive Wildlife Observations → Weather Enricher → YR.no API → Weather Database
      ↓
-Wildlife Observations + Weather Data
+Individual Observations + Weather Data (at specific time/location)
 ```
 
 ## Features
@@ -68,64 +69,72 @@ The weather integration automatically creates the required database tables:
 
 ### Command Line Interface
 
-#### Enrich a Single Cluster
+#### Enrich a Single Observation
 
 ```bash
-python scripts/enrich_weather.py enrich-cluster \
-  --cluster-id cluster_123 \
+python scripts/enrich_observations_weather.py enrich-single \
+  --observation-id obs_123 \
+  --timestamp "2024-01-15T10:30:00Z" \
+  --latitude 59.9139 \
+  --longitude 10.7522
+```
+
+#### Enrich All Positive Observations
+
+```bash
+python scripts/enrich_observations_weather.py enrich-positive \
   --days-back 7
 ```
 
-#### Enrich All Clusters
+#### Show Weather Data for Observation
 
 ```bash
-python scripts/enrich_weather.py enrich-all \
-  --days-back 3
-```
-
-#### Show Weather Data
-
-```bash
-python scripts/enrich_weather.py show-data \
-  --cluster-id cluster_123 \
-  --show-details
+python scripts/enrich_observations_weather.py show-weather \
+  --observation-id obs_123
 ```
 
 #### Show Statistics
 
 ```bash
-python scripts/enrich_weather.py show-stats
+python scripts/enrich_observations_weather.py show-stats
 ```
 
 #### Cleanup Cache
 
 ```bash
-python scripts/enrich_weather.py cleanup-cache
+python scripts/enrich_observations_weather.py cleanup-cache
 ```
 
 ### Programmatic Usage
 
 ```python
-from munin.yr_weather_enricher import YRWeatherEnricher
+from munin.observation_weather_enricher import ObservationWeatherEnricher
 from datetime import datetime, timedelta
 
 # Initialize weather enricher
-weather_enricher = YRWeatherEnricher(Path("wildlife_pipeline.db"))
+weather_enricher = ObservationWeatherEnricher(Path("wildlife_pipeline.db"))
 
-# Enrich a cluster with weather data
-cluster_data = {
-    'cluster_id': 'cluster_123',
-    'start_date': datetime.now() - timedelta(days=7),
-    'end_date': datetime.now()
+# Enrich a single positive observation
+observation_data = {
+    'observation_id': 'obs_123',
+    'timestamp': datetime.now() - timedelta(hours=2),
+    'latitude': 59.9139,
+    'longitude': 10.7522,
+    'camera_id': 'camera_001'
 }
 
-result = weather_enricher.enrich_cluster_weather(cluster_data)
-print(f"Enriched with {result['observations_count']} weather observations")
+result = weather_enricher.enrich_single_observation(observation_data)
+print(f"Enrichment result: {result['success']}")
 
-# Retrieve weather data
-weather_data = weather_enricher.get_weather_for_cluster('cluster_123')
-for obs in weather_data:
-    print(f"{obs['timestamp']}: {obs['temperature']}°C, {obs['humidity']}% humidity")
+# Enrich all positive observations from database
+batch_result = weather_enricher.enrich_positive_observations_from_db(days_back=7)
+print(f"Enriched {batch_result['successful_enrichments']} observations")
+
+# Retrieve weather data for specific observation
+weather_data = weather_enricher.get_weather_for_observation('obs_123')
+if weather_data:
+    print(f"Temperature: {weather_data['temperature']}°C")
+    print(f"Humidity: {weather_data['humidity']}%")
 ```
 
 ## Configuration
