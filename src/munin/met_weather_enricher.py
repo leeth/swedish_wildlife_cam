@@ -8,6 +8,7 @@ Includes caching and rate limiting considerations.
 import json
 import logging
 import time
+import math
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import requests
@@ -26,11 +27,12 @@ class METWeatherEnricher:
     - Europe/Stockholm timezone normalization
     """
     
-    def __init__(self, cache_dir: str = "/tmp/weather_cache", ttl_hours: int = 72):
+    def __init__(self, cache_dir: str = "/tmp/weather_cache", ttl_hours: int = 72, proximity_km: float = 10.0):
         self.base_url = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.ttl_hours = ttl_hours  # 72 hours cache for same location
+        self.proximity_km = proximity_km  # 10km radius for proximity caching
         self.user_agent = "WildlifePipeline/1.0 (https://github.com/your-org/wildlife-pipeline)"
         
         # Rate limiting: max 1 request per second
@@ -49,12 +51,67 @@ class METWeatherEnricher:
         
         self.last_request_time = time.time()
     
+    def _calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """Calculate distance between two GPS coordinates in kilometers using Haversine formula."""
+        # Convert to radians
+        lat1_rad = math.radians(lat1)
+        lon1_rad = math.radians(lon1)
+        lat2_rad = math.radians(lat2)
+        lon2_rad = math.radians(lon2)
+        
+        # Haversine formula
+        dlat = lat2_rad - lat1_rad
+        dlon = lon2_rad - lon1_rad
+        
+        a = math.sin(dlat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon/2)**2
+        c = 2 * math.asin(math.sqrt(a))
+        
+        # Earth radius in kilometers
+        earth_radius_km = 6371.0
+        
+        return earth_radius_km * c
+    
     def _get_cache_key(self, lat: float, lon: float, timestamp: datetime) -> str:
         """Generate cache key for (lat,lon) combination with 72h cache."""
         # Round coordinates to ~100m precision for location-based caching
         lat_rounded = round(lat, 3)  # ~100m precision
         lon_rounded = round(lon, 3)  # ~100m precision
         return f"{lat_rounded:.3f}_{lon_rounded:.3f}"
+    
+    def _find_proximity_cache(self, lat: float, lon: float) -> Optional[Tuple[str, Dict]]:
+        """Find cached forecast within proximity radius (10km)."""
+        try:
+            for cache_file in self.cache_dir.glob("*.json"):
+                try:
+                    with open(cache_file, 'r') as f:
+                        cached_data = json.load(f)
+                    
+                    # Check TTL first
+                    cached_time = datetime.fromisoformat(cached_data['cached_at'])
+                    if datetime.now() - cached_time > timedelta(hours=self.ttl_hours):
+                        continue  # Skip expired cache
+                    
+                    # Extract coordinates from cache key
+                    cache_key = cache_file.stem
+                    if '_' in cache_key:
+                        cached_lat, cached_lon = map(float, cache_key.split('_'))
+                        
+                        # Calculate distance
+                        distance_km = self._calculate_distance(lat, lon, cached_lat, cached_lon)
+                        
+                        if distance_km <= self.proximity_km:
+                            logger.info(f"Found proximity cache within {distance_km:.2f}km of {lat:.4f}, {lon:.4f}")
+                            return cache_key, cached_data['forecast']
+                
+                except Exception as e:
+                    logger.warning(f"Failed to check proximity cache {cache_file}: {e}")
+                    continue
+            
+            return None
+        
+        except Exception as e:
+            logger.error(f"Failed to find proximity cache: {e}")
+            return None
     
     def _get_cached_forecast(self, cache_key: str) -> Optional[Dict]:
         """Get cached forecast if still valid (72h TTL for same location)."""
@@ -219,18 +276,26 @@ class METWeatherEnricher:
             stockholm_tz = datetime.now().astimezone().tzinfo
             normalized_time = timestamp.astimezone(stockholm_tz)
             
-            # Check cache first (72h TTL for same location)
-            cache_key = self._get_cache_key(lat, lon, normalized_time)
-            cached_forecast = self._get_cached_forecast(cache_key)
+            # Check proximity cache first (10km radius, 72h TTL)
+            proximity_result = self._find_proximity_cache(lat, lon)
             
-            if cached_forecast:
-                logger.info(f"Using cached forecast for {lat:.4f}, {lon:.4f} (location-based cache)")
+            if proximity_result:
+                cache_key, cached_forecast = proximity_result
+                logger.info(f"Using proximity cache for {lat:.4f}, {lon:.4f} (within {self.proximity_km}km)")
                 forecast = cached_forecast
             else:
-                # Fetch from API (only if not cached for this location)
-                logger.info(f"Fetching fresh forecast for {lat:.4f}, {lon:.4f} (not in cache)")
-                forecast = self._fetch_forecast(lat, lon)
-                self._cache_forecast(cache_key, forecast)
+                # Check exact location cache
+                cache_key = self._get_cache_key(lat, lon, normalized_time)
+                cached_forecast = self._get_cached_forecast(cache_key)
+                
+                if cached_forecast:
+                    logger.info(f"Using exact location cache for {lat:.4f}, {lon:.4f}")
+                    forecast = cached_forecast
+                else:
+                    # Fetch from API (only if not cached within proximity)
+                    logger.info(f"Fetching fresh forecast for {lat:.4f}, {lon:.4f} (not in proximity cache)")
+                    forecast = self._fetch_forecast(lat, lon)
+                    self._cache_forecast(cache_key, forecast)
             
             # Find nearest forecast time
             nearest_forecast = self._find_nearest_forecast(forecast, normalized_time)
@@ -317,18 +382,68 @@ class METWeatherEnricher:
             logger.error(f"Failed to cleanup cache: {e}")
     
     def get_cache_stats(self) -> Dict[str, Any]:
-        """Get cache statistics."""
+        """Get cache statistics including proximity information."""
         try:
             cache_files = list(self.cache_dir.glob("*.json"))
             total_size = sum(f.stat().st_size for f in cache_files)
             
+            # Analyze cache coverage
+            valid_caches = 0
+            expired_caches = 0
+            
+            for cache_file in cache_files:
+                try:
+                    with open(cache_file, 'r') as f:
+                        cached_data = json.load(f)
+                    
+                    cached_time = datetime.fromisoformat(cached_data['cached_at'])
+                    if datetime.now() - cached_time <= timedelta(hours=self.ttl_hours):
+                        valid_caches += 1
+                    else:
+                        expired_caches += 1
+                
+                except Exception:
+                    expired_caches += 1
+            
             return {
                 'cache_dir': str(self.cache_dir),
                 'total_files': len(cache_files),
+                'valid_caches': valid_caches,
+                'expired_caches': expired_caches,
                 'total_size_bytes': total_size,
-                'ttl_hours': self.ttl_hours
+                'ttl_hours': self.ttl_hours,
+                'proximity_km': self.proximity_km
             }
         
         except Exception as e:
             logger.error(f"Failed to get cache stats: {e}")
             return {}
+    
+    def test_proximity_cache(self, test_lat: float, test_lon: float) -> Dict[str, Any]:
+        """Test proximity cache functionality for a given location."""
+        try:
+            # Find proximity cache
+            proximity_result = self._find_proximity_cache(test_lat, test_lon)
+            
+            if proximity_result:
+                cache_key, cached_forecast = proximity_result
+                cached_lat, cached_lon = map(float, cache_key.split('_'))
+                distance_km = self._calculate_distance(test_lat, test_lon, cached_lat, cached_lon)
+                
+                return {
+                    'found': True,
+                    'cache_key': cache_key,
+                    'cached_location': f"{cached_lat:.4f}, {cached_lon:.4f}",
+                    'distance_km': round(distance_km, 2),
+                    'within_proximity': distance_km <= self.proximity_km
+                }
+            else:
+                return {
+                    'found': False,
+                    'proximity_km': self.proximity_km,
+                    'message': f"No cache found within {self.proximity_km}km radius"
+                }
+        
+        except Exception as e:
+            logger.error(f"Failed to test proximity cache: {e}")
+            return {'error': str(e)}
