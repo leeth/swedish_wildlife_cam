@@ -1,12 +1,14 @@
 import json
 import logging
+import jsonschema
 from typing import Dict, Any
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    Validate input schema for wildlife pipeline.
+    Validate input schema for wildlife pipeline using JSON Schema.
     
     Expected input:
     {
@@ -19,54 +21,27 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         "coordinates": {
             "lat": 59.9139,
             "lon": 10.7522
+        },
+        "images": {
+            "count": 100,
+            "max_images": 1000
         }
     }
     """
     try:
-        # Validate required fields
-        required_fields = [
-            "run_id", "input_uri", "output_uri", 
-            "budget_dkk", "use_spot", "max_job_duration"
-        ]
+        # Load JSON Schema
+        schema_path = Path(__file__).parent.parent.parent / "conf" / "input.schema.json"
+        with open(schema_path, 'r') as f:
+            schema = json.load(f)
         
-        for field in required_fields:
-            if field not in event:
-                raise ValueError(f"Missing required field: {field}")
+        # Validate against JSON Schema
+        jsonschema.validate(instance=event, schema=schema)
         
-        # Validate data types
-        if not isinstance(event["run_id"], str) or not event["run_id"].strip():
-            raise ValueError("run_id must be a non-empty string")
-        
-        if not isinstance(event["input_uri"], str) or not event["input_uri"].startswith("s3://"):
-            raise ValueError("input_uri must be a valid S3 URI")
-        
-        if not isinstance(event["output_uri"], str) or not event["output_uri"].startswith("s3://"):
-            raise ValueError("output_uri must be a valid S3 URI")
-        
-        if not isinstance(event["budget_dkk"], (int, float)) or event["budget_dkk"] <= 0:
-            raise ValueError("budget_dkk must be a positive number")
-        
-        if not isinstance(event["use_spot"], bool):
-            raise ValueError("use_spot must be a boolean")
-        
-        if not isinstance(event["max_job_duration"], int) or event["max_job_duration"] <= 0:
-            raise ValueError("max_job_duration must be a positive integer")
-        
-        # Validate coordinates if provided
-        if "coordinates" in event:
-            coords = event["coordinates"]
-            if not isinstance(coords, dict):
-                raise ValueError("coordinates must be a dictionary")
-            
-            if "lat" not in coords or "lon" not in coords:
-                raise ValueError("coordinates must contain lat and lon")
-            
-            lat, lon = coords["lat"], coords["lon"]
-            if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
-                raise ValueError("lat and lon must be numbers")
-            
-            if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
-                raise ValueError("Invalid latitude or longitude values")
+        # Additional business logic validation
+        if "images" in event:
+            images = event["images"]
+            if images["count"] > images["max_images"]:
+                raise ValueError(f"Image count ({images['count']}) exceeds max_images ({images['max_images']})")
         
         logger.info(f"Input validation successful for run_id: {event['run_id']}")
         
@@ -79,11 +54,15 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             "use_spot": event["use_spot"],
             "max_job_duration": event["max_job_duration"],
             "coordinates": event.get("coordinates"),
+            "images": event.get("images"),
             "session_id": event["run_id"],  # For compatibility
             "validated_at": context.aws_request_id,
             "status": "validated"
         }
         
+    except jsonschema.ValidationError as e:
+        logger.error(f"JSON Schema validation failed: {e.message}")
+        raise Exception("InvalidInput") from e
     except Exception as e:
         logger.error(f"Input validation failed: {str(e)}")
         raise Exception("InvalidInput") from e

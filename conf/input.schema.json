@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Wildlife Pipeline Input Schema",
+  "description": "Input validation schema for wildlife pipeline",
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique run identifier"
+    },
+    "input_uri": {
+      "type": "string",
+      "pattern": "^s3://[^/]+/.*",
+      "description": "S3 URI for input data"
+    },
+    "output_uri": {
+      "type": "string", 
+      "pattern": "^s3://[^/]+/.*",
+      "description": "S3 URI for output data"
+    },
+    "budget_dkk": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Budget in Danish Kroner"
+    },
+    "use_spot": {
+      "type": "boolean",
+      "description": "Whether to use spot instances"
+    },
+    "max_job_duration": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 7200,
+      "description": "Maximum job duration in seconds"
+    },
+    "coordinates": {
+      "type": "object",
+      "properties": {
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      },
+      "required": ["lat", "lon"],
+      "description": "GPS coordinates"
+    },
+    "images": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_images": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      },
+      "required": ["count", "max_images"],
+      "description": "Image count and limits"
+    }
+  },
+  "required": [
+    "run_id",
+    "input_uri", 
+    "output_uri",
+    "budget_dkk",
+    "use_spot",
+    "max_job_duration"
+  ],
+  "additionalProperties": false
+}
