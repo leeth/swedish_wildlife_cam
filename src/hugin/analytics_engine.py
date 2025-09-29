@@ -21,19 +21,21 @@ except ImportError as e:
     print("Install with: pip install polars pandas numpy")
     exit(1)
 
+from common.core.base import BaseAnalyzer
+from common.exceptions import ProcessingError, ValidationError
+from common.utils.logging_utils import get_logger, ProcessingTimer
+from common.utils.file_utils import is_image_file, get_file_size
 from .efficient_cluster_lookup import EfficientClusterLookup
-from .logging_config import get_logger
-
-logger = get_logger("wildlife_pipeline.analytics_engine")
 
 
-class AnalyticsEngine:
+class AnalyticsEngine(BaseAnalyzer):
     """High-performance analytics engine using Polars."""
 
-    def __init__(self, cache_dir: Optional[str] = None, cluster_lookup: Optional[EfficientClusterLookup] = None):
+    def __init__(self, cache_dir: Optional[str] = None, cluster_lookup: Optional[EfficientClusterLookup] = None, **kwargs):
+        super().__init__(**kwargs)
         self.cache_dir = Path(cache_dir) if cache_dir else Path.home() / ".wildlife_cache" / "analytics"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.logger = logger
+        self.logger = get_logger(self.__class__.__name__)
         self.cluster_lookup = cluster_lookup
 
         # Configure Polars for optimal performance
@@ -41,6 +43,29 @@ class AnalyticsEngine:
         pl.Config.set_fmt_str_lengths(100)
 
         self.logger.info("🚀 Analytics engine initialized with Polars")
+
+    def analyze(self, data: Any) -> Any:
+        """Analyze data using the analytics engine.
+        
+        Args:
+            data: Data to analyze (DataFrame, file path, or configuration)
+            
+        Returns:
+            Analysis results
+        """
+        if isinstance(data, (str, Path)):
+            # Load data from file
+            data_path = Path(data)
+            if data_path.suffix.lower() == '.parquet':
+                df = self.load_observations_from_parquet(data_path)
+            else:
+                raise ValidationError(f"Unsupported file format: {data_path.suffix}")
+        elif hasattr(data, 'shape'):  # DataFrame-like object
+            df = data
+        else:
+            raise ValidationError(f"Unsupported data type: {type(data)}")
+            
+        return self.generate_analytics_report(df)
 
     def load_observations_from_parquet(self, parquet_path: Union[str, Path]) -> pl.DataFrame:
         """Load observations from Parquet file using Polars."""

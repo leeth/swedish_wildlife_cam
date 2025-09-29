@@ -18,7 +18,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Any
 
 try:
     import av
@@ -31,10 +31,11 @@ except ImportError as e:
     print("Install with: pip install av opencv-python pillow numpy ultralytics")
     sys.exit(1)
 
-from ..detector import Detection
-from ..logging_config import get_logger
-
-logger = get_logger("wildlife_pipeline.video_processor_optimized")
+from common.core.base import BaseProcessor
+from common.exceptions import ProcessingError, ValidationError
+from common.utils.logging_utils import get_logger, ProcessingTimer
+from common.utils.file_utils import is_video_file, get_file_size
+from .detector import Detection
 
 
 @dataclass
@@ -168,12 +169,13 @@ class BatchPrefetcher:
             self.thread.join(timeout=2.0)
 
 
-class OptimizedVideoProcessor:
+class OptimizedVideoProcessor(BaseProcessor):
     """High-performance video processor with GPU acceleration."""
 
-    def __init__(self, config: VideoProcessingConfig = None):
+    def __init__(self, config: VideoProcessingConfig = None, **kwargs):
+        super().__init__(**kwargs)
         self.config = config or VideoProcessingConfig()
-        self.logger = logger
+        self.logger = get_logger(self.__class__.__name__)
 
         # Set parallel workers based on CPU count
         if self.config.parallel_workers is None:
@@ -186,6 +188,36 @@ class OptimizedVideoProcessor:
         else:
             self.logger.info("⚠️  GPU decoding not available, using CPU")
             self.config.use_gpu_decoding = False
+
+    def process(self, input_data: Any) -> Any:
+        """Process video data.
+        
+        Args:
+            input_data: Video path or configuration dictionary
+            
+        Returns:
+            Processing results
+        """
+        if isinstance(input_data, (str, Path)):
+            video_path = Path(input_data)
+            detector = None
+            output_dir = None
+        elif isinstance(input_data, dict):
+            video_path = Path(input_data['video_path'])
+            detector = input_data.get('detector')
+            output_dir = input_data.get('output_dir')
+            if output_dir:
+                output_dir = Path(output_dir)
+        else:
+            raise ValidationError(f"Unsupported input data type: {type(input_data)}")
+            
+        if not video_path.exists():
+            raise ValidationError(f"Video file not found: {video_path}")
+            
+        if not is_video_file(video_path):
+            raise ValidationError(f"File is not a video: {video_path}")
+            
+        return self.process_video_optimized(video_path, detector, output_dir)
 
     def _check_gpu_support(self) -> bool:
         """Check if GPU decoding is available."""

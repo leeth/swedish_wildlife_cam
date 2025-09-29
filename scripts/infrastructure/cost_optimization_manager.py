@@ -17,34 +17,59 @@ import sys
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
-import logging
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from common.core.base import BaseProcessor
+from common.exceptions import ProcessingError, ConfigurationError
+from common.utils.logging_utils import get_logger, setup_logging, ProcessingTimer
 
 
-class CostOptimizationManager:
+class CostOptimizationManager(BaseProcessor):
     """Manages cost-optimized infrastructure lifecycle."""
     
-    def __init__(self, region: str = "eu-north-1", environment: str = "production"):
+    def __init__(self, region: str = "eu-north-1", environment: str = "production", **kwargs):
+        super().__init__(**kwargs)
         self.region = region
         self.environment = environment
-        self.batch = boto3.client('batch', region_name=region)
-        self.ec2 = boto3.client('ec2', region_name=region)
-        self.cloudwatch = boto3.client('cloudwatch', region_name=region)
-        self.lambda_client = boto3.client('lambda', region_name=region)
+        self.logger = get_logger(self.__class__.__name__)
+        
+        try:
+            self.batch = boto3.client('batch', region_name=region)
+            self.ec2 = boto3.client('ec2', region_name=region)
+            self.cloudwatch = boto3.client('cloudwatch', region_name=region)
+            self.lambda_client = boto3.client('lambda', region_name=region)
+        except Exception as e:
+            raise ConfigurationError(f"Failed to initialize AWS clients: {e}") from e
         
         # Resource names
         self.compute_env_name = f"wildlife-detection-compute-{environment}"
         self.job_queue_name = f"wildlife-detection-queue-{environment}"
         self.job_def_name = f"wildlife-detection-job-{environment}"
+
+    def process(self, input_data: Any) -> Any:
+        """Process infrastructure management request.
+        
+        Args:
+            input_data: Infrastructure configuration or command
+            
+        Returns:
+            Infrastructure management result
+        """
+        if isinstance(input_data, dict):
+            action = input_data.get('action', 'status')
+            if action == 'setup':
+                return self.setup_infrastructure(input_data.get('job_count', 1))
+            elif action == 'teardown':
+                return self.teardown_infrastructure()
+            elif action == 'status':
+                return self.get_compute_environment_status()
+            else:
+                raise ValidationError(f"Unknown action: {action}")
+        else:
+            # Default to status check
+            return self.get_compute_environment_status()
         
     def get_compute_environment_status(self) -> Dict:
         """Get current status of compute environment."""
@@ -343,6 +368,10 @@ class CostOptimizationManager:
 
 def main():
     """Main CLI for cost optimization manager."""
+    # Setup logging
+    setup_logging(level="INFO")
+    logger = get_logger("cost_optimization_manager")
+    
     parser = argparse.ArgumentParser(description="Cost Optimization Infrastructure Manager")
     parser.add_argument("--region", default="eu-north-1", help="AWS region")
     parser.add_argument("--environment", default="production", help="Environment name")
@@ -358,8 +387,10 @@ def main():
     
     args = parser.parse_args()
     
-    # Initialize manager
-    manager = CostOptimizationManager(args.region, args.environment)
+    try:
+        with ProcessingTimer(logger, f"cost optimization {args.action}"):
+            # Initialize manager
+            manager = CostOptimizationManager(args.region, args.environment)
     
     try:
         if args.action == 'setup':

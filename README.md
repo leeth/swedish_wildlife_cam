@@ -96,6 +96,11 @@ src/odin/cli.py batch --input s3://your-bucket/input --output s3://your-bucket/o
 
 ```
 ├── src/                     # Source code
+│   ├── common/             # 🆕 Shared functionality
+│   │   ├── core/           # Base classes & configuration
+│   │   ├── exceptions/      # Custom exception hierarchy
+│   │   ├── types/          # Type definitions & data classes
+│   │   └── utils/          # Utility functions
 │   ├── odin/               # All-Father (Infrastruktur)
 │   │   ├── cli.py          # Odin CLI interface
 │   │   ├── config.py       # Configuration management
@@ -263,6 +268,25 @@ src/odin/cli.py --config conf/profiles/local.yaml data list
 src/odin/cli.py --config conf/profiles/local.yaml cost report
 src/odin/cli.py --config conf/profiles/local.yaml cost optimize
 ```
+
+## 🏗️ Codebase Architecture
+
+### 🆕 **Refactored Architecture (2024)**
+The codebase has been completely refactored to follow Python best practices:
+
+- **Common Package**: Shared functionality across all modules
+- **Abstract Base Classes**: Consistent interfaces for all components
+- **Type Safety**: Comprehensive type hints and data classes
+- **Exception Hierarchy**: Structured error handling
+- **Configuration Management**: Centralized, validated configuration
+- **Utility Functions**: Organized by domain (file, image, logging, video)
+
+### 🎯 **Key Improvements**
+- **Maintainable**: Clear separation of concerns and consistent patterns
+- **Extensible**: Easy to add new detectors, analyzers, and processors
+- **Testable**: Abstract base classes enable easy mocking and testing
+- **Professional**: Follows Python best practices and conventions
+- **Production-Ready**: Comprehensive error handling and logging
 
 ## 🛠️ Teknologi Stack
 

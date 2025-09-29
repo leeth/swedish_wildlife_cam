@@ -5,31 +5,54 @@ This module provides the core cost optimization functionality that can be used
 by both Munin and Hugin for infrastructure lifecycle management.
 """
 
-import logging
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional, Any
 
 import boto3
 
+from common.core.base import BaseProcessor
+from common.exceptions import ProcessingError, ConfigurationError
+from common.utils.logging_utils import get_logger, ProcessingTimer
 from .config import CostOptimizationConfig
 
-logger = logging.getLogger(__name__)
 
-
-class CostOptimizationManager:
+class CostOptimizationManager(BaseProcessor):
     """Manages cost-optimized infrastructure lifecycle."""
 
-    def __init__(self, config: CostOptimizationConfig):
+    def __init__(self, config: CostOptimizationConfig, **kwargs):
+        super().__init__(**kwargs)
         self.config = config
-        self.batch = boto3.client('batch', region_name=config.region)
-        self.ec2 = boto3.client('ec2', region_name=config.region)
-        self.cloudwatch = boto3.client('cloudwatch', region_name=config.region)
+        self.logger = get_logger(self.__class__.__name__)
+        
+        try:
+            self.batch = boto3.client('batch', region_name=config.region)
+            self.ec2 = boto3.client('ec2', region_name=config.region)
+            self.cloudwatch = boto3.client('cloudwatch', region_name=config.region)
+        except Exception as e:
+            raise ConfigurationError(f"Failed to initialize AWS clients: {e}") from e
 
         # Resource names
         self.compute_env_name = f"wildlife-detection-compute-{config.environment}"
         self.job_queue_name = f"wildlife-detection-queue-{config.environment}"
         self.job_def_name = f"wildlife-detection-job-{config.environment}"
+
+    def process(self, input_data: Any) -> Any:
+        """Process infrastructure setup request.
+        
+        Args:
+            input_data: Dictionary containing job_count and gpu_required
+            
+        Returns:
+            Setup result
+        """
+        if not isinstance(input_data, dict):
+            raise ProcessingError("Input data must be a dictionary")
+            
+        job_count = input_data.get('job_count', 1)
+        gpu_required = input_data.get('gpu_required', self.config.gpu_required)
+        
+        return self.setup_infrastructure(job_count, gpu_required)
 
     def setup_infrastructure(self, job_count: int = 1, gpu_required: bool = None) -> bool:
         """Set up cost-optimized infrastructure for batch processing."""
@@ -37,9 +60,10 @@ class CostOptimizationManager:
             if gpu_required is None:
                 gpu_required = self.config.gpu_required
 
-            logger.info(f"Setting up cost-optimized infrastructure for {job_count} jobs")
-            logger.info(f"GPU required: {gpu_required}")
-            logger.info(f"Spot bid percentage: {self.config.spot_bid_percentage}%")
+            with ProcessingTimer(self.logger, f"infrastructure setup for {job_count} jobs"):
+                self.logger.info(f"Setting up cost-optimized infrastructure for {job_count} jobs")
+                self.logger.info(f"GPU required: {gpu_required}")
+                self.logger.info(f"Spot bid percentage: {self.config.spot_bid_percentage}%")
 
             # Calculate required vCPUs based on job count
             vcpus_per_job = 4 if gpu_required else 2

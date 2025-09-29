@@ -1,0 +1,88 @@
+# Weather Integration Configuration for Munin
+# YR.no Weather Data Enrichment Settings
+
+weather:
+  # Primary weather provider
+  provider: "yr_no"
+  
+  # YR.no specific settings
+  yr_no:
+    # User agent for API requests (required by YR.no)
+    user_agent: "Wildlife-Pipeline/1.0 (contact@wildlife-pipeline.org)"
+    
+    # API endpoints
+    base_url: "https://api.met.no/weatherapi"
+    location_forecast_url: "/locationforecast/2.0/complete"
+    historical_url: "/locationforecast/2.0/historical"
+    
+    # Request settings
+    timeout: 30  # seconds
+    retry_attempts: 3
+    retry_delay: 5  # seconds
+    
+    # Cache settings
+    cache_duration_hours: 6  # YR.no updates frequently
+    max_cache_entries: 1000
+    
+  # Database settings
+  database:
+    # Weather observations table
+    weather_table: "yr_weather_observations"
+    cache_table: "yr_weather_cache"
+    
+    # Indexes for performance
+    indexes:
+      - "idx_yr_weather_cluster"
+      - "idx_yr_weather_timestamp"
+      - "idx_yr_weather_coords"
+      - "idx_yr_cache_key"
+      - "idx_yr_cache_expires"
+  
+  # Enrichment settings
+  enrichment:
+    # Default date range for weather data
+    default_days_back: 7
+    
+    # Batch processing settings
+    batch_size: 10  # clusters per batch
+    batch_delay: 2  # seconds between batches
+    
+    # Weather parameters to collect
+    parameters:
+      - "temperature"
+      - "humidity"
+      - "precipitation"
+      - "wind_speed"
+      - "wind_direction"
+      - "pressure"
+      - "visibility"
+      - "cloud_cover"
+      - "uv_index"
+      - "dew_point"
+      - "wind_gust"
+  
+  # Logging settings
+  logging:
+    level: "INFO"
+    log_requests: true
+    log_responses: false  # Don't log full API responses
+    log_cache_hits: true
+  
+  # Error handling
+  error_handling:
+    max_retries: 3
+    retry_delay: 5  # seconds
+    skip_failed_clusters: true
+    log_errors: true
+  
+  # Performance settings
+  performance:
+    # Parallel processing
+    max_workers: 4
+    
+    # Memory management
+    max_memory_mb: 512
+    
+    # Database connection pool
+    db_pool_size: 10
+    db_timeout: 30

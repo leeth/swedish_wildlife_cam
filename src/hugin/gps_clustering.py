@@ -19,6 +19,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from common.core.base import BaseProcessor
+from common.exceptions import ProcessingError, ValidationError
+from common.utils.logging_utils import get_logger, ProcessingTimer
 from .data_models import (
     ClusterBoundary,
     GPSCluster,
@@ -37,14 +40,39 @@ class GPSPoint:
     camera_id: Optional[str] = None
 
 
-class GPSClusterManager:
+class GPSClusterManager(BaseProcessor):
     """GPS proximity cluster manager with 5m radius clustering."""
 
-    def __init__(self, db_path: Path, logger: Optional[logging.Logger] = None):
+    def __init__(self, db_path: Path, cluster_radius_meters: float = 5.0, **kwargs):
+        super().__init__(**kwargs)
         self.db_path = db_path
-        self.logger = logger or logging.getLogger(__name__)
-        self.cluster_radius_meters = 5.0  # 5m radius = 10m diameter
+        self.logger = get_logger(self.__class__.__name__)
+        self.cluster_radius_meters = cluster_radius_meters  # 5m radius = 10m diameter
+        
+        # Validate parameters
+        if cluster_radius_meters <= 0:
+            raise ValidationError("Cluster radius must be positive")
+            
         self._init_database()
+
+    def process(self, input_data: Any) -> Any:
+        """Process GPS clustering request.
+        
+        Args:
+            input_data: GPS points or configuration for clustering
+            
+        Returns:
+            Clustering results
+        """
+        if isinstance(input_data, list):
+            # List of GPS points
+            gps_points = input_data
+        elif isinstance(input_data, dict) and 'gps_points' in input_data:
+            gps_points = input_data['gps_points']
+        else:
+            raise ValidationError("Input data must be GPS points or configuration dictionary")
+            
+        return self.cluster_gps_points(gps_points)
 
     def _init_database(self):
         """Initialize SQLite database with cluster tables."""
