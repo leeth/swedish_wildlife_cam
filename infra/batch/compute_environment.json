@@ -1,0 +1,37 @@
+{
+  "computeEnvironmentName": "wildlife-detection-compute",
+  "type": "MANAGED",
+  "state": "ENABLED",
+  "computeResources": {
+    "type": "EC2",
+    "minvCpus": 0,
+    "maxvCpus": 100,
+    "desiredvCpus": 0,
+    "instanceTypes": [
+      "c5.large",
+      "c5.xlarge",
+      "c5.2xlarge"
+    ],
+    "subnets": [
+      "${SubnetId}"
+    ],
+    "securityGroupIds": [
+      "${SecurityGroupId}"
+    ],
+    "instanceRole": "${BatchInstanceRoleArn}",
+    "tags": {
+      "Project": "WildlifePipeline",
+      "Environment": "${Environment}"
+    },
+    "launchTemplate": {
+      "launchTemplateName": "wildlife-batch-template",
+      "version": "$Latest"
+    }
+  },
+  "serviceRole": "${BatchServiceRoleArn}",
+  "tags": {
+    "Project": "WildlifePipeline",
+    "Environment": "${Environment}"
+  }
+}
+

@@ -9,33 +9,41 @@ Odins Ravne er et omfattende system til svensk vildtmonitorering der kombinerer:
 - **Hugin**: Analyse, indsigt og visualisering (Stage 2+)
 - **Odin**: All-Father - Infrastruktur management og orchestration
 
-## 🔄 System Workflow
+## 🔄 System Workflow - Step Functions Architecture
 
 ```mermaid
 graph TD
-    A[Wildlife Camera Images] --> B[Munin Stage 0: Video Processing]
-    B --> C[Munin Stage 1: Object Detection]
-    C --> D{Positive Observations?}
-    D -->|Yes| E[Hugin Stage 2.1: Human/Animal Detection]
-    D -->|No| F[End: No Wildlife]
+    A[Manual Start] --> B[GuardBudget: Cost Validation]
+    B --> C[Stage-0: EXIF Processing]
+    C --> D[Stage-1: AWS Batch Detection]
+    D --> E[Stage-2: Post-processing & Clustering]
+    E --> F[WeatherEnrichment: YR.no API]
+    F --> G[WriteParquet: Final Output]
+    G --> H[Success: Complete Pipeline]
     
-    E --> G[Hugin Stage 2.2: Species Detection]
-    G --> H[Hugin Stage 2.3: GPS Clustering]
-    H --> I[Hugin Stage 2.4: Cluster Enrichment]
-    I --> J[Final Reports with Cluster Names]
-    
-    K[User Labeling] --> L[Cluster Names]
-    L --> I
+    B -->|Budget Exceeded| I[Fail: Budget Error]
     
     style A fill:#e1f5fe
-    style B fill:#f3e5f5
+    style B fill:#ffebee
     style C fill:#f3e5f5
+    style D fill:#f3e5f5
     style E fill:#e8f5e8
+    style F fill:#e8f5e8
     style G fill:#e8f5e8
-    style H fill:#e8f5e8
-    style I fill:#e8f5e8
-    style J fill:#fff3e0
+    style H fill:#fff3e0
+    style I fill:#ffcdd2
 ```
+
+### 🎯 **New Step Functions Workflow**
+
+The pipeline is now orchestrated as a **manual, budget-controlled AWS Step Functions workflow**:
+
+1. **GuardBudget** - Validates cost estimates before starting
+2. **Stage-0** - EXIF data extraction and time correction (Lambda)
+3. **Stage-1** - Wildlife detection via AWS Batch (spot instances)
+4. **Stage-2** - Post-processing and GPS clustering (Lambda)
+5. **WeatherEnrichment** - Weather data enrichment for positive observations (Lambda)
+6. **WriteParquet** - Final output generation (Lambda)
 
 ### Workflow Stages
 
@@ -91,6 +99,50 @@ scripts/infrastructure/create_aws_test_user.py
 # Deploy to AWS Batch
 src/odin/cli.py batch --input s3://your-bucket/input --output s3://your-bucket/output
 ```
+
+## 🏗️ **Step Functions Architecture**
+
+### **New AWS Step Functions Workflow**
+
+The pipeline is now orchestrated as a **manual, budget-controlled AWS Step Functions workflow**:
+
+#### **Local Development (LocalStack)**
+```bash
+# Start LocalStack
+make up-localstack
+
+# Deploy to LocalStack
+make deploy-local
+
+# Run pipeline locally
+make run-local
+```
+
+#### **Production (AWS)**
+```bash
+# Deploy to AWS
+make deploy-aws
+
+# Run pipeline in AWS
+make run-aws
+```
+
+#### **Cleanup**
+```bash
+# Stop LocalStack
+make down-localstack
+
+# Destroy local resources
+make destroy-local
+```
+
+### **Step Functions Components**
+
+- **`infra/stepfn/state_machine.asl.json`** - Step Functions state machine definition
+- **`lambdas/`** - Lambda handlers for each stage
+- **`infra/batch/`** - AWS Batch configuration for Stage-1 detection
+- **`docker/munin-detector/`** - Docker image for Batch jobs
+- **`infra/cloudformation/`** - Complete AWS infrastructure template
 
 ## 📁 Projekt Struktur
 
