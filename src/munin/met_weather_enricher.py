@@ -26,11 +26,11 @@ class METWeatherEnricher:
     - Europe/Stockholm timezone normalization
     """
     
-    def __init__(self, cache_dir: str = "/tmp/weather_cache", ttl_hours: int = 3):
+    def __init__(self, cache_dir: str = "/tmp/weather_cache", ttl_hours: int = 72):
         self.base_url = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.ttl_hours = ttl_hours
+        self.ttl_hours = ttl_hours  # 72 hours cache for same location
         self.user_agent = "WildlifePipeline/1.0 (https://github.com/your-org/wildlife-pipeline)"
         
         # Rate limiting: max 1 request per second
@@ -50,13 +50,14 @@ class METWeatherEnricher:
         self.last_request_time = time.time()
     
     def _get_cache_key(self, lat: float, lon: float, timestamp: datetime) -> str:
-        """Generate cache key for (lat,lon,hour) combination."""
-        # Round to nearest hour for caching
-        hour_key = timestamp.replace(minute=0, second=0, microsecond=0)
-        return f"{lat:.4f}_{lon:.4f}_{hour_key.strftime('%Y%m%d_%H')}"
+        """Generate cache key for (lat,lon) combination with 72h cache."""
+        # Round coordinates to ~100m precision for location-based caching
+        lat_rounded = round(lat, 3)  # ~100m precision
+        lon_rounded = round(lon, 3)  # ~100m precision
+        return f"{lat_rounded:.3f}_{lon_rounded:.3f}"
     
     def _get_cached_forecast(self, cache_key: str) -> Optional[Dict]:
-        """Get cached forecast if still valid."""
+        """Get cached forecast if still valid (72h TTL for same location)."""
         cache_file = self.cache_dir / f"{cache_key}.json"
         
         if not cache_file.exists():
@@ -66,12 +67,14 @@ class METWeatherEnricher:
             with open(cache_file, 'r') as f:
                 cached_data = json.load(f)
             
-            # Check TTL
+            # Check TTL (72 hours for same location)
             cached_time = datetime.fromisoformat(cached_data['cached_at'])
             if datetime.now() - cached_time > timedelta(hours=self.ttl_hours):
                 cache_file.unlink()  # Remove expired cache
+                logger.debug(f"Cache expired for {cache_key} (older than {self.ttl_hours}h)")
                 return None
             
+            logger.debug(f"Using cached forecast for {cache_key} (age: {datetime.now() - cached_time})")
             return cached_data['forecast']
         
         except Exception as e:
@@ -79,19 +82,21 @@ class METWeatherEnricher:
             return None
     
     def _cache_forecast(self, cache_key: str, forecast: Dict):
-        """Cache forecast data."""
+        """Cache forecast data for 72 hours (same location)."""
         cache_file = self.cache_dir / f"{cache_key}.json"
         
         try:
             cache_data = {
                 'cached_at': datetime.now().isoformat(),
-                'forecast': forecast
+                'forecast': forecast,
+                'ttl_hours': self.ttl_hours,
+                'location': cache_key
             }
             
             with open(cache_file, 'w') as f:
                 json.dump(cache_data, f)
             
-            logger.debug(f"Cached forecast for {cache_key}")
+            logger.info(f"Cached forecast for {cache_key} (TTL: {self.ttl_hours}h)")
         
         except Exception as e:
             logger.warning(f"Failed to cache forecast {cache_key}: {e}")
@@ -214,15 +219,16 @@ class METWeatherEnricher:
             stockholm_tz = datetime.now().astimezone().tzinfo
             normalized_time = timestamp.astimezone(stockholm_tz)
             
-            # Check cache first
+            # Check cache first (72h TTL for same location)
             cache_key = self._get_cache_key(lat, lon, normalized_time)
             cached_forecast = self._get_cached_forecast(cache_key)
             
             if cached_forecast:
-                logger.debug(f"Using cached forecast for {lat:.4f}, {lon:.4f}")
+                logger.info(f"Using cached forecast for {lat:.4f}, {lon:.4f} (location-based cache)")
                 forecast = cached_forecast
             else:
-                # Fetch from API
+                # Fetch from API (only if not cached for this location)
+                logger.info(f"Fetching fresh forecast for {lat:.4f}, {lon:.4f} (not in cache)")
                 forecast = self._fetch_forecast(lat, lon)
                 self._cache_forecast(cache_key, forecast)
             
@@ -283,3 +289,46 @@ class METWeatherEnricher:
                 enriched_observations.append(obs)
         
         return enriched_observations
+    
+    def cleanup_expired_cache(self):
+        """Clean up expired cache files."""
+        try:
+            expired_files = []
+            for cache_file in self.cache_dir.glob("*.json"):
+                try:
+                    with open(cache_file, 'r') as f:
+                        cached_data = json.load(f)
+                    
+                    cached_time = datetime.fromisoformat(cached_data['cached_at'])
+                    if datetime.now() - cached_time > timedelta(hours=self.ttl_hours):
+                        expired_files.append(cache_file)
+                
+                except Exception as e:
+                    logger.warning(f"Failed to check cache file {cache_file}: {e}")
+                    expired_files.append(cache_file)  # Remove corrupted files
+            
+            for cache_file in expired_files:
+                cache_file.unlink()
+                logger.debug(f"Removed expired cache: {cache_file.name}")
+            
+            logger.info(f"Cleaned up {len(expired_files)} expired cache files")
+        
+        except Exception as e:
+            logger.error(f"Failed to cleanup cache: {e}")
+    
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
+        try:
+            cache_files = list(self.cache_dir.glob("*.json"))
+            total_size = sum(f.stat().st_size for f in cache_files)
+            
+            return {
+                'cache_dir': str(self.cache_dir),
+                'total_files': len(cache_files),
+                'total_size_bytes': total_size,
+                'ttl_hours': self.ttl_hours
+            }
+        
+        except Exception as e:
+            logger.error(f"Failed to get cache stats: {e}")
+            return {}
