@@ -65,21 +65,36 @@ dev = [
     "jupyter>=1.0.0",
     "ipykernel>=6.0.0",
 ]
+
+# GPU-accelerated dependencies (CUDA 11.8/12.1)
 gpu = [
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
-    "tensorrt>=8.0.0",
-    "onnx>=1.14.0",
-    "onnxruntime-gpu>=1.15.0",
+    "torch==2.1.0+cu118",
+    "torchvision==0.16.0+cu118", 
+    "tensorrt==8.6.1",
+    "onnx==1.15.0",
+    "onnxruntime-gpu==1.16.3",
+    "triton==2.1.0",
 ]
+
+# CPU-only dependencies (for production servers without GPU)
+cpu = [
+    "torch==2.1.0+cpu",
+    "torchvision==0.16.0+cpu",
+    "onnx==1.15.0", 
+    "onnxruntime==1.16.3",
+]
+
+# Cloud deployment dependencies
 cloud = [
     "kubernetes>=27.0.0",
-    "docker>=6.0.0",
+    "docker>=6.0.0", 
     "awscli>=2.0.0",
     "google-cloud-sdk>=400.0.0",
 ]
+
+# All dependencies
 all = [
-    "wildlife-pipeline[dev,gpu,cloud]"
+    "odins-ravne[dev,gpu,cloud]"
 ]
 
 [project.urls]

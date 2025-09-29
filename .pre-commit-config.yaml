@@ -118,3 +118,57 @@ repos:
         files: 'src/.*\.py$'
         pass_filenames: false
         always_run: true
+
+      - id: wildlife-pipeline-pep-score
+        name: Wildlife Pipeline PEP Score (95%+)
+        entry: python scripts/quality/pep_score.py
+        language: system
+        files: 'src/.*\.py$'
+        pass_filenames: false
+        always_run: true
+
+      - id: wildlife-pipeline-quality-gate
+        name: Wildlife Pipeline Quality Gate
+        entry: python -c "
+import subprocess
+import sys
+import os
+
+def run_quality_checks():
+    checks = [
+        ('Ruff', ['python', '-m', 'ruff', 'check', 'src/', '--statistics']),
+        ('Black', ['python', '-m', 'black', 'src/', '--check', '--diff']),
+        ('MyPy', ['python', '-m', 'mypy', 'src/', '--ignore-missing-imports']),
+    ]
+    
+    total_issues = 0
+    
+    for name, cmd in checks:
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.getcwd())
+            if result.returncode != 0:
+                print(f'❌ {name} failed:')
+                print(result.stdout)
+                print(result.stderr)
+                total_issues += 1
+            else:
+                print(f'✅ {name} passed')
+        except Exception as e:
+            print(f'❌ {name} error: {e}')
+            total_issues += 1
+    
+    if total_issues > 0:
+        print(f'❌ Quality gate failed: {total_issues} checks failed')
+        print('Fix all quality issues before committing')
+        sys.exit(1)
+    else:
+        print('✅ All quality checks passed - PEP score 95%+ maintained')
+        return True
+
+if not run_quality_checks():
+    sys.exit(1)
+"
+        language: system
+        files: 'src/.*\.py$'
+        pass_filenames: false
+        always_run: true

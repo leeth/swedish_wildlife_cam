@@ -1,12 +1,10 @@
 #!/bin/bash
-"""
-Deploy wildlife pipeline to AWS.
-"""
+# Deploy wildlife pipeline to AWS.
 
 set -e
 
 # Configuration
-REGION="${AWS_DEFAULT_REGION:-us-east-1}"
+REGION="${AWS_DEFAULT_REGION:-eu-north-1}"
 BUCKET_NAME="${BUCKET_NAME:-wildlife-pipeline-$(date +%s)}"
 STACK_NAME="${STACK_NAME:-wildlife-pipeline}"
 

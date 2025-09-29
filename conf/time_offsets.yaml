@@ -1,0 +1,65 @@
+# Time Offset Configuration for Camera Synchronization
+# This file defines time corrections for different camera systems
+
+camera_systems:
+  # Standard trail cameras
+  trail_camera:
+    default_offset: 0  # No offset by default
+    timezone: "Europe/Stockholm"
+    dst_handling: "automatic"
+    
+  # GPS-enabled cameras
+  gps_camera:
+    default_offset: 0
+    timezone: "UTC"
+    dst_handling: "manual"
+    
+  # Legacy camera systems
+  legacy_system:
+    default_offset: -3600  # 1 hour behind
+    timezone: "Europe/Stockholm"
+    dst_handling: "manual"
+
+# Camera-specific time corrections
+camera_corrections:
+  # Example camera corrections (replace with actual camera IDs)
+  "CAM001":
+    offset_seconds: 0
+    timezone: "Europe/Stockholm"
+    notes: "Primary trail camera - no correction needed"
+    
+  "CAM002":
+    offset_seconds: 300  # 5 minutes ahead
+    timezone: "Europe/Stockholm"
+    notes: "Secondary camera - 5 minutes fast"
+    
+  "CAM003":
+    offset_seconds: -1800  # 30 minutes behind
+    timezone: "Europe/Stockholm"
+    notes: "Legacy camera - 30 minutes slow"
+
+# Seasonal time adjustments
+seasonal_adjustments:
+  summer_time:
+    start_date: "2024-03-31"
+    end_date: "2024-10-27"
+    offset_seconds: 3600  # +1 hour for DST
+    
+  winter_time:
+    start_date: "2024-10-27"
+    end_date: "2025-03-30"
+    offset_seconds: 0  # Standard time
+
+# Time validation rules
+validation:
+  max_offset_seconds: 86400  # Maximum 24 hours
+  min_offset_seconds: -86400  # Minimum -24 hours
+  warn_on_large_offset: true
+  auto_correct_obvious_errors: true
+
+# Output time format
+output_format:
+  timezone: "Europe/Stockholm"
+  format: "%Y-%m-%d %H:%M:%S"
+  include_utc: true
+  include_offset_info: true

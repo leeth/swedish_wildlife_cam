@@ -1,5 +1,15 @@
 # 🐦‍⬛ Odins Ravne - Swedish Wildlife Intelligence System
 
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+[![PEP Score](https://img.shields.io/badge/PEP%20Score-95%25%2B-brightgreen.svg)](https://pep8.readthedocs.io/)
+[![Tests](https://img.shields.io/badge/tests-pytest-blue.svg)](https://pytest.org/)
+[![AWS](https://img.shields.io/badge/AWS-S3%20%7C%20Batch%20%7C%20Lambda-orange.svg)](https://aws.amazon.com/)
+[![Docker](https://img.shields.io/badge/Docker-Containerized-blue.svg)](https://www.docker.com/)
+
 **Munin** (Memory Keeper) samler og bevarer vildtdata fra kameraer, mens **Hugin** (Thought Bringer) giver dyb indsigt og forståelse af dyrelivet.
 
 ## 🎯 Projekt Oversigt
@@ -13,15 +23,15 @@ Odins Ravne er et omfattende system til svensk vildtmonitorering der kombinerer:
 
 ```mermaid
 graph TD
-    A[Manual Start] --> B[GuardBudget: Cost Validation]
-    B --> C[Stage-0: EXIF Processing]
-    C --> D[Stage-1: AWS Batch Detection]
-    D --> E[Stage-2: Post-processing & Clustering]
-    E --> F[WeatherEnrichment: YR.no API]
-    F --> G[WriteParquet: Final Output]
-    G --> H[Success: Complete Pipeline]
+    A["Manual Start"] --> B["GuardBudget: Cost Validation"]
+    B --> C["Stage-0: EXIF Processing"]
+    C --> D["Stage-1: AWS Batch Detection"]
+    D --> E["Stage-2: Post-processing & Clustering"]
+    E --> F["WeatherEnrichment: YR.no API"]
+    F --> G["WriteParquet: Final Output"]
+    G --> H["Success: Complete Pipeline"]
     
-    B -->|Budget Exceeded| I[Fail: Budget Error]
+    B -->|"Budget Exceeded"| I["Fail: Budget Error"]
     
     style A fill:#e1f5fe
     style B fill:#ffebee
@@ -153,6 +163,7 @@ make destroy-local
 │   │   ├── exceptions/      # Custom exception hierarchy
 │   │   ├── types/          # Type definitions & data classes
 │   │   └── utils/          # Utility functions
+│   │       └── session_logging.py # Session-based logging
 │   ├── odin/               # All-Father (Infrastruktur)
 │   │   ├── cli.py          # Odin CLI interface
 │   │   ├── config.py       # Configuration management
@@ -174,9 +185,21 @@ make destroy-local
 │   ├── profiles/           # Environment profiles
 │   │   ├── local.yaml     # Local configuration
 │   │   └── cloud.yaml     # Cloud configuration
+│   ├── species.yaml        # 🆕 Species labels configuration
+│   ├── time_offsets.yaml  # 🆕 Time offset configuration
 │   ├── aws/                # AWS configurations
 │   ├── docker/             # Docker configurations
 │   └── logging.yaml        # Logging configuration
+├── models/                  # 🆕 Model storage
+│   ├── yolov8n.pt         # YOLO model weights
+│   ├── yolov8n_metadata.yaml # Model metadata
+│   └── yolov8n_checksum.txt # Model checksum
+├── logs/                   # 🆕 Enhanced logging
+│   ├── app/               # Application logs
+│   ├── debug/             # Debug logs
+│   ├── error/             # Error logs
+│   ├── audit/             # Audit logs
+│   └── sessions/          # 🆕 Session-specific logs
 ├── scripts/                 # Utility scripts
 │   ├── cli/                # CLI tools
 │   ├── infrastructure/     # AWS/cloud setup
@@ -195,6 +218,103 @@ make destroy-local
 │   ├── PLANTUML_DIAGRAMS.md # PlantUML diagrams
 │   └── diagrams/           # PlantUML diagram files
 └── logs/                   # Log files
+```
+
+### 📊 **Enhanced Logging System**
+
+#### **Session-Based Logging**
+- **Session ID**: Unique identifier per run for easy troubleshooting
+- **Session Logs**: `logs/sessions/session_{session_id}.log`
+- **Automatic Rotation**: 50MB max per session, 3 backups
+- **Session Summary**: Track session info, errors, and success metrics
+
+#### **AWS Step Functions Integration**
+Session logging integrerer perfekt med AWS Step Functions:
+
+- **Step Functions Execution**: Bruger execution name som session ID
+- **Lambda Functions**: Bruger function name + timestamp som session ID  
+- **Batch Jobs**: Bruger job ID som session ID
+- **AWS Context**: Automatisk detektering af AWS miljø og context
+
+#### **Log Organization**
+```
+logs/
+├── app/                    # Application logs (rotated)
+├── debug/                   # Debug logs (rotated)
+├── error/                   # Error logs (rotated)
+├── audit/                   # Audit logs (JSON format)
+└── sessions/                # Session-specific logs
+    ├── session_20241201_143022_abc12345.log  # Local execution
+    ├── session_wildlife-pipeline-execution-123.log  # Step Functions
+    ├── session_GuardBudget_20241201_143022.log  # Lambda function
+    └── session_batch_job-456.log  # Batch job
+```
+
+#### **S3 Data Structure**
+```
+s3://<bucket>/
+├── raw/<camera_id>/YYYY/MM/DD/...     # Raw camera data organized by date
+├── munin/<run_id>/stage1.parquet      # Stage 1 detection results
+├── hugin/<run_id>/clusters.parquet    # Stage 2 clustering results  
+└── reports/<run_id>/summary.csv        # Final reports and summaries
+```
+
+#### **AWS Step Functions Logging Flow**
+```mermaid
+graph TD
+    A[Step Functions Execution] --> B[GuardBudget Lambda]
+    B --> C[Stage-0 Lambda]
+    C --> D[Batch Job]
+    D --> E[Stage-2 Lambda]
+    E --> F[WeatherEnrichment Lambda]
+    F --> G[WriteParquet Lambda]
+    
+    B --> H[Session: execution-name]
+    C --> H
+    D --> I[Session: batch-job-id]
+    E --> H
+    F --> H
+    G --> H
+    
+    H --> J[CloudWatch Logs]
+    I --> J
+    J --> K[Centralized Session Tracking]
+    
+    G --> L[S3: munin/<run_id>/stage1.parquet]
+    E --> M[S3: hugin/<run_id>/clusters.parquet]
+    G --> N[S3: reports/<run_id>/summary.csv]
+```
+
+#### **S3 Data Flow Tracking**
+Session logging integrerer med S3 datastrukturen for komplet data tracking:
+
+```python
+from src.common.utils.session_logging import get_session_logger
+
+# Get session logger (automatic AWS context detection)
+logger = get_session_logger(component="munin")
+
+# Log S3 data paths
+logger.log_s3_path("stage1", "s3://bucket/munin/run-123/stage1.parquet", "Detection results")
+logger.log_s3_path("stage2", "s3://bucket/hugin/run-123/clusters.parquet", "Clustering results")
+logger.log_s3_path("reports", "s3://bucket/reports/run-123/summary.csv", "Final report")
+
+# Log data flow between stages
+logger.log_data_flow("stage1", "stage2", "s3://bucket/munin/run-123/stage1.parquet")
+logger.log_data_flow("stage2", "reports", "s3://bucket/hugin/run-123/clusters.parquet")
+
+# Standard logging with session context
+logger.info("Processing wildlife detection...")
+logger.error("Detection failed", exc_info=True)
+```
+
+#### **Complete Data Tracking Example**
+```
+2024-12-01 14:30:22 - session_wildlife-pipeline-execution-123.munin - INFO - [SESSION:wildlife-pipeline-execution-123] [AWS:step_functions] - 🚀 Session started: wildlife-pipeline-execution-123
+2024-12-01 14:30:23 - session_wildlife-pipeline-execution-123.munin - INFO - [SESSION:wildlife-pipeline-execution-123] [AWS:step_functions] - 📁 S3 stage1: s3://wildlife-bucket/munin/run-123/stage1.parquet Detection results
+2024-12-01 14:30:45 - session_wildlife-pipeline-execution-123.hugin - INFO - [SESSION:wildlife-pipeline-execution-123] [AWS:step_functions] - 🔄 Data Flow: stage1 → stage2 via s3://wildlife-bucket/munin/run-123/stage1.parquet
+2024-12-01 14:31:12 - session_wildlife-pipeline-execution-123.hugin - INFO - [SESSION:wildlife-pipeline-execution-123] [AWS:step_functions] - 📁 S3 stage2: s3://wildlife-bucket/hugin/run-123/clusters.parquet Clustering results
+2024-12-01 14:31:30 - session_wildlife-pipeline-execution-123.odin - INFO - [SESSION:wildlife-pipeline-execution-123] [AWS:step_functions] - 📁 S3 reports: s3://wildlife-bucket/reports/run-123/summary.csv Final report
 ```
 
 ## 🐦‍⬛ Munin (Memory Keeper)
@@ -218,6 +338,27 @@ make destroy-local
 - **Format Support**: MP4, AVI, MOV, MKV, WebM, FLV, WMV
 
 ### 🦌 Vildt Detektion Modeller
+
+### 📁 **Model Management**
+
+#### **Model Storage Locations**
+- **Lokalt**: `./models/` - Lokale YOLO vægte og metadata
+- **Cloud**: `s3://wildlife-models-bucket/` - Cloud-baseret model storage
+- **Cache**: `~/.wildlife_models/` - Automatisk download cache
+
+#### **Model Checksums & Auto-Download**
+```bash
+# Automatisk model download med checksum validering
+munin models download --model yolov8n.pt --checksum abc123def456
+munin models verify --model ./models/yolov8n.pt
+munin models list --remote  # Vis tilgængelige cloud modeller
+```
+
+#### **Model Metadata**
+Hver model inkluderer metadata filer:
+- `yolov8n_metadata.yaml` - Model information, checksums, labels
+- `yolov8n_checksum.txt` - SHA256 checksum for validering
+- `yolov8n_labels.json` - Species labels og confidence mapping
 
 #### **Swedish Wildlife Detector**
 - **Optimeret til svenske arter**: Elg, vildsvin, rådyr, ræv, grævling
@@ -244,6 +385,10 @@ detections = detector.predict(image_path)
 
 **CLI Kommandoer**:
 ```bash
+# Enhanced CLI with configuration files
+munin detect --input /path/to/images --out /path/to/output --labels conf/species.yaml --time-fix conf/time_offsets.yaml
+
+# Traditional commands
 munin ingest /input /output --extensions jpg,mp4
 munin process /data --stage1 --stage2
 munin upload /data --cloud aws
@@ -285,6 +430,74 @@ python -m hugin.hugin_gps_cluster_management cluster submit-names labels.yaml
 - Pipeline orchestration
 - Cost optimization
 - Resource management
+
+### 🔐 **Security & Credentials Management**
+
+#### **Environment Variables Setup**
+```bash
+# Create .env file (NEVER commit this file!)
+cp .env.example .env
+
+# Edit .env with your credentials
+nano .env
+```
+
+#### **AWS Credentials Configuration**
+```bash
+# Option 1: AWS CLI Configuration
+aws configure
+# Enter your AWS Access Key ID, Secret Access Key, Region, and Output format
+
+# Option 2: Environment Variables
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_DEFAULT_REGION="eu-north-1"
+
+# Option 3: IAM Roles (Recommended for EC2/Lambda)
+# No credentials needed - uses instance/execution role
+```
+
+#### **Required Environment Variables**
+```bash
+# AWS Configuration
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+AWS_DEFAULT_REGION=eu-north-1
+AWS_S3_BUCKET=your-wildlife-bucket
+
+# Pipeline Configuration
+WILDLIFE_PIPELINE_ENV=development  # or production
+WILDLIFE_PIPELINE_BUDGET=1000      # DKK budget limit
+WILDLIFE_PIPELINE_MAX_IMAGES=1000  # Max images per run
+
+# Optional: Weather API
+YR_NO_API_KEY=your-yr-api-key
+```
+
+#### **Security Best Practices**
+- ✅ **NEVER commit `.env` files** - they're in `.gitignore`
+- ✅ **Use IAM roles** instead of access keys when possible
+- ✅ **Rotate credentials** regularly
+- ✅ **Use least privilege** - only grant necessary permissions
+- ✅ **Enable MFA** on AWS accounts
+- ✅ **Monitor access** with CloudTrail
+
+#### **Gitignore Security**
+```bash
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# AWS credentials
+.aws/
+aws-credentials.json
+
+# API keys
+api-keys.json
+secrets.yaml
+```
 
 ### 🏗️ Infrastruktur Management
 - **AWS Setup**: CloudFormation, Batch, S3, IAM
@@ -422,13 +635,52 @@ Se [ROADMAP.md](docs/ROADMAP.md) for detaljeret udviklingsplan.
 - **PlantUML Diagrams**: [PLANTUML_DIAGRAMS.md](docs/PLANTUML_DIAGRAMS.md)
 - **Diagram Overview**: [DIAGRAM_OVERVIEW.md](docs/DIAGRAM_OVERVIEW.md)
 
+## 🎯 **Code Quality & PEP Score**
+
+### **PEP Score 95%+ Requirement**
+Alle commits skal opretholde en PEP score på 95% eller højere:
+
+```bash
+# Check current PEP score
+python scripts/quality/pep_score.py
+
+# Auto-fix common issues
+python -m black src/          # Format code
+python -m ruff check src/ --fix  # Auto-fix linting issues
+python -m isort src/          # Sort imports
+```
+
+### **Pre-commit Hooks**
+Automatiske quality gates ved hver commit:
+- ✅ **Black**: Code formatting
+- ✅ **Ruff**: Linting og auto-fix
+- ✅ **MyPy**: Type checking
+- ✅ **PEP Score**: 95%+ requirement
+- ✅ **Tests**: All tests must pass
+
+### **Quality Tools**
+```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run all quality checks
+pre-commit run --all-files
+
+# Run specific checks
+python -m black src/ --check
+python -m ruff check src/
+python -m mypy src/
+python scripts/quality/pep_score.py
+```
+
 ## 🤝 Bidrag
 
 1. Fork repository
 2. Opret feature branch
 3. Lav dine ændringer
-4. Tilføj tests
-5. Submit pull request
+4. **Ensure PEP score 95%+** (automatic via pre-commit)
+5. Tilføj tests
+6. Submit pull request
 
 ## 📄 Licens
 

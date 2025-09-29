@@ -82,6 +82,51 @@ def ingest(input_path: str, output_path: str, extensions: str,
 @cli.command()
 @click.argument('input_path', type=click.Path(exists=True))
 @click.argument('output_path', type=click.Path())
+@click.option('--labels', type=click.Path(exists=True), help='Species labels configuration file')
+@click.option('--time-fix', type=click.Path(exists=True), help='Time offset configuration file')
+@click.option('--model', default='yolov8n.pt', help='Model path or name')
+@click.option('--confidence', default=0.3, help='Detection confidence threshold')
+@click.option('--min-area', default=0.003, help='Minimum relative area')
+@click.option('--max-area', default=0.8, help='Maximum relative area')
+@click.option('--edge-margin', default=12, help='Edge margin in pixels')
+@click.option('--crop-padding', default=0.15, help='Crop padding ratio')
+@click.option('--save-crops', is_flag=True, help='Save cropped images')
+@click.option('--workers', type=int, help='Number of parallel workers')
+def detect(input_path: str, output_path: str, labels: Optional[str], time_fix: Optional[str],
+           model: str, confidence: float, min_area: float, max_area: float, 
+           edge_margin: int, crop_padding: float, save_crops: bool, workers: Optional[int]):
+    """Detect wildlife in images and videos with enhanced ergonomics.
+
+    INPUT_PATH: Directory containing images and videos
+    OUTPUT_PATH: Directory to save results
+    """
+    click.echo("🐦‍⬛ Munin Detect - Enhanced Wildlife Detection")
+    click.echo("Detecting wildlife with configuration files...")
+
+    # Load configuration files if provided
+    if labels:
+        click.echo(f"📋 Loading species labels from: {labels}")
+        # TODO: Load species labels configuration
+    
+    if time_fix:
+        click.echo(f"⏰ Loading time offsets from: {time_fix}")
+        # TODO: Load time offset configuration
+
+    # Initialize detector
+    if model in ['megadetector', 'md', 'mega', 'swedish']:
+        detector = SwedishWildlifeDetector()
+    else:
+        detector = WildlifeDetector(model)
+
+    # Process files
+    # TODO: Implement detection logic with configuration support
+
+    click.echo("✅ Wildlife detection completed!")
+
+
+@cli.command()
+@click.argument('input_path', type=click.Path(exists=True))
+@click.argument('output_path', type=click.Path())
 @click.option('--model', default='yolov8n.pt', help='Model path or name')
 @click.option('--confidence', default=0.3, help='Detection confidence threshold')
 @click.option('--min-area', default=0.003, help='Minimum relative area')

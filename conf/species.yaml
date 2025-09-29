@@ -1,0 +1,74 @@
+# Species Labels Configuration for Swedish Wildlife Detection
+# This file maps COCO class IDs to Swedish wildlife species
+
+species_mapping:
+  # Swedish Wildlife Species
+  elk:  # Älg
+    coco_classes: [0, 1, 2]  # person, bicycle, car (common misclassifications)
+    confidence_threshold: 0.4
+    description: "Elk (Älg) - Large deer species"
+    scientific_name: "Alces alces"
+    
+  wild_boar:  # Vildsvin
+    coco_classes: [0, 1, 2, 3]  # person, bicycle, car, motorcycle
+    confidence_threshold: 0.35
+    description: "Wild Boar (Vildsvin) - Wild pig species"
+    scientific_name: "Sus scrofa"
+    
+  roe_deer:  # Rådyr
+    coco_classes: [0, 1, 2, 3, 4]  # person, bicycle, car, motorcycle, airplane
+    confidence_threshold: 0.3
+    description: "Roe Deer (Rådyr) - Small deer species"
+    scientific_name: "Capreolus capreolus"
+    
+  fox:  # Räv
+    coco_classes: [0, 1, 2, 3, 4, 5]  # person, bicycle, car, motorcycle, airplane, bus
+    confidence_threshold: 0.25
+    description: "Red Fox (Räv) - Canine predator"
+    scientific_name: "Vulpes vulpes"
+    
+  badger:  # Grävling
+    coco_classes: [0, 1, 2, 3, 4, 5, 6]  # person, bicycle, car, motorcycle, airplane, bus, train
+    confidence_threshold: 0.2
+    description: "European Badger (Grävling) - Mustelid species"
+    scientific_name: "Meles meles"
+
+# Detection confidence thresholds
+confidence_thresholds:
+  high_confidence: 0.7
+  medium_confidence: 0.4
+  low_confidence: 0.2
+
+# Species-specific detection parameters
+detection_params:
+  elk:
+    min_area: 0.01
+    max_area: 0.8
+    edge_margin: 20
+    
+  wild_boar:
+    min_area: 0.005
+    max_area: 0.6
+    edge_margin: 15
+    
+  roe_deer:
+    min_area: 0.003
+    max_area: 0.4
+    edge_margin: 10
+    
+  fox:
+    min_area: 0.002
+    max_area: 0.3
+    edge_margin: 8
+    
+  badger:
+    min_area: 0.001
+    max_area: 0.2
+    edge_margin: 5
+
+# Output formatting
+output_format:
+  include_scientific_name: true
+  include_confidence_score: true
+  include_detection_metadata: true
+  save_cropped_images: false

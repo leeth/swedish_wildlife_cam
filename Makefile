@@ -55,12 +55,14 @@ destroy-local:
 # AWS Production
 deploy-aws:
 	@echo "☁️ Deploying to AWS..."
+	export AWS_DEFAULT_REGION=eu-north-1
 	chmod +x infra/scripts/deploy_aws.sh
 	./infra/scripts/deploy_aws.sh
 	@echo "✅ AWS deployment completed!"
 
 run-aws:
 	@echo "🏃 Running pipeline in AWS..."
+	export AWS_DEFAULT_REGION=eu-north-1
 	@echo "Please run the following command with your actual state machine ARN:"
 	@echo "aws stepfunctions start-execution \\"
 	@echo "  --state-machine-arn <YOUR_STATE_MACHINE_ARN> \\"

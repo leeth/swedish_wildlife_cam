@@ -1,12 +1,10 @@
 #!/bin/bash
-"""
-Deploy wildlife pipeline to LocalStack for local development.
-"""
+# Deploy wildlife pipeline to LocalStack for local development.
 
 set -e
 
 # Configuration
-REGION="us-east-1"
+REGION="eu-north-1"
 ACCOUNT_ID="000000000000"
 BUCKET_NAME="wildlife"
 STACK_NAME="wildlife-pipeline-local"

@@ -30,6 +30,15 @@ handlers:
     backupCount: 5
     encoding: utf8
   
+  session_file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: detailed
+    filename: logs/sessions/session_{session_id}.log
+    maxBytes: 52428800  # 50MB
+    backupCount: 3
+    encoding: utf8
+  
   debug_file:
     class: logging.handlers.RotatingFileHandler
     level: DEBUG
