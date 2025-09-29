@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 # from .image_loader import create_image_loader  # TODO: Implement image loader
-from .logging_config import get_logger
+from ..common.utils.logging_utils import get_logger
 
 if TYPE_CHECKING:
     from pathlib import Path

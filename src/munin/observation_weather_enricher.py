@@ -20,9 +20,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from common.core.base import BaseProcessor
-from common.exceptions import ProcessingError, ValidationError
-from common.utils.logging_utils import get_logger, ProcessingTimer
+from ..common.core.base import BaseProcessor
+from ..common.exceptions import ProcessingError, ValidationError
+from ..common.utils.logging_utils import get_logger, ProcessingTimer
 
 
 @dataclass

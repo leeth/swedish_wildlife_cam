@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, List, Optional, Any, Dict
 from pathlib import Path
 
-from common.core.base import BaseDetector
-from common.types import DetectionResult
-from common.exceptions import ProcessingError, ValidationError
-from common.utils.logging_utils import get_logger, ProcessingTimer
+from ..common.core.base import BaseDetector
+from ..common.types import DetectionResult
+from ..common.exceptions import ProcessingError, ValidationError
+from ..common.utils.logging_utils import get_logger, ProcessingTimer
 
 if TYPE_CHECKING:
     pass

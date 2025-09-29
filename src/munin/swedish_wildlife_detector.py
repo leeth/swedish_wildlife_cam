@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 
 import requests
 
-from .detector import BaseDetector, Detection
-from .http_client import HttpClient, create_http_client
+from ..common.core.base import BaseDetector
+from .wildlife_detector import Detection
 
 if TYPE_CHECKING:
     from pathlib import Path

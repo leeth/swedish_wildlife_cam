@@ -31,11 +31,11 @@ except ImportError as e:
     print("Install with: pip install av opencv-python pillow numpy ultralytics")
     sys.exit(1)
 
-from common.core.base import BaseProcessor
-from common.exceptions import ProcessingError, ValidationError
-from common.utils.logging_utils import get_logger, ProcessingTimer
-from common.utils.file_utils import is_video_file, get_file_size
-from .detector import Detection
+from ..common.core.base import BaseProcessor
+from ..common.exceptions import ProcessingError, ValidationError
+from ..common.utils.logging_utils import get_logger, ProcessingTimer
+from ..common.utils.file_utils import is_video_file, get_file_size
+from .wildlife_detector import Detection
 
 
 @dataclass

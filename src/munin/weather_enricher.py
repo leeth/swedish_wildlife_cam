@@ -22,9 +22,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from enum import Enum
 
-from common.core.base import BaseProcessor
-from common.exceptions import ProcessingError, ValidationError
-from common.utils.logging_utils import get_logger, ProcessingTimer
+from ..common.core.base import BaseProcessor
+from ..common.exceptions import ProcessingError, ValidationError
+from ..common.utils.logging_utils import get_logger, ProcessingTimer
 
 
 class WeatherProvider(Enum):

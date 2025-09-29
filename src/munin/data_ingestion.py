@@ -29,7 +29,7 @@ except ImportError as e:
     print("Install with: pip install pillow piexif tqdm opencv-python numpy")
     sys.exit(1)
 
-from .logging_config import get_logger
+from ..common.utils.logging_utils import get_logger
 
 logger = get_logger("wildlife_pipeline.io_optimized")
 
