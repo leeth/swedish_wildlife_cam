@@ -10,10 +10,8 @@ services:
       - DEBUG=1
       - LAMBDA_EXECUTOR=docker-reuse
       - DOCKER_HOST=unix:///var/run/docker.sock
-      - HOST_TMP_FOLDER=${TMPDIR:-/tmp/}localstack
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - "${TMPDIR:-/tmp}/localstack:/tmp/localstack"
       - "./infra:/opt/code/infra"
     networks:
       - wildlife-network
