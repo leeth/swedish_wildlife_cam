@@ -21,9 +21,9 @@ except ImportError as e:
     print("Install with: pip install polars pandas numpy")
     exit(1)
 
-from common.core.base import BaseAnalyzer
-from common.exceptions import ValidationError
-from common.utils.logging_utils import get_logger
+from src.common.core.base import BaseAnalyzer
+from src.common.exceptions import ValidationError
+from src.common.utils.logging_utils import get_logger
 from .efficient_cluster_lookup import EfficientClusterLookup
 
 

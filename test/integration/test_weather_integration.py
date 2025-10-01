@@ -14,8 +14,8 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from munin.yr_weather_enricher import YRWeatherEnricher
-from hugin.gps_clustering import GPSClusterManager
+from src.munin.weather_enricher import WeatherEnricher
+from src.hugin.gps_clustering import GPSClusterManager
 
 
 def test_weather_integration():

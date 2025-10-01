@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from odin.validation import (
+from src.odin.validation import (
     validate_environment_variable, 
     sanitize_log_data, 
     validate_path,
@@ -226,7 +226,7 @@ class TestSecurityValidation(unittest.TestCase):
     
     def test_sql_identifier_validation(self):
         """Test SQL identifier validation."""
-        from odin.validation import validate_sql_identifier
+        from src.odin.validation import validate_sql_identifier
         
         # Test valid identifiers
         valid_identifiers = ['table_name', 'column_name', 'user_id', '_private']
@@ -251,7 +251,7 @@ class TestSecurityValidation(unittest.TestCase):
     
     def test_numeric_range_validation(self):
         """Test numeric range validation."""
-        from odin.validation import validate_numeric_range
+        from src.odin.validation import validate_numeric_range
         
         # Test valid ranges
         result = validate_numeric_range(5, min_val=0, max_val=10)
@@ -266,7 +266,7 @@ class TestSecurityValidation(unittest.TestCase):
     
     def test_string_length_validation(self):
         """Test string length validation."""
-        from odin.validation import validate_string_length
+        from src.odin.validation import validate_string_length
         
         # Test valid lengths
         result = validate_string_length('hello', min_length=3, max_length=10)

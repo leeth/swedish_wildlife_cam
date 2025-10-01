@@ -14,7 +14,7 @@ import sys
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from odin.validation import (
+from src.odin.validation import (
     ValidationError,
     validate_path,
     validate_s3_path,

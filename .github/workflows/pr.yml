@@ -244,7 +244,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: schemas
-          path: schemas/
+          path: models/schemas/
 
   ge:
     name: Great Expectations

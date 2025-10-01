@@ -14,7 +14,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from munin.observation_weather_enricher import ObservationWeatherEnricher
+from src.munin.observation_weather_enricher import ObservationWeatherEnricher
 
 
 def test_observation_weather_enrichment():

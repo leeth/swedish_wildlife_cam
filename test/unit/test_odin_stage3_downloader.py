@@ -14,8 +14,8 @@ import sys
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from odin.stage3_downloader import Stage3OutputDownloader
-from odin.config import OdinConfig
+from src.odin.stage3_downloader import Stage3OutputDownloader
+from src.odin.config import OdinConfig
 
 
 class TestStage3OutputDownloader(unittest.TestCase):

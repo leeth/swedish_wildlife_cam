@@ -13,10 +13,10 @@ def test_weather_imports():
     """Test weather module imports."""
     try:
         # Test direct import without going through __init__.py
-        from munin.observation_weather_enricher import ObservationWeatherEnricher
+        from src.munin.observation_weather_enricher import ObservationWeatherEnricher
         print("✅ ObservationWeatherEnricher imported successfully")
         
-        from munin.yr_weather_enricher import YRWeatherEnricher
+        from src.munin.weather_enricher import WeatherEnricher
         print("✅ YRWeatherEnricher imported successfully")
         
         # Test initialization

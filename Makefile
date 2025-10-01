@@ -81,9 +81,9 @@ test:
 
 schema:
 	@echo "📊 Generating schemas..."
-	python -c "from src.common.schemas.events import EventsSchema; EventsSchema().to_json_schema_file('schemas/events_v1.json')"
-	python -c "from src.common.schemas.detections import DetectionsSchema; DetectionsSchema().to_json_schema_file('schemas/detections_v1.json')"
-	python -c "from src.common.schemas.metadata import MetadataSchema; MetadataSchema().to_json_schema_file('schemas/metadata_v1.json')"
+	python -c "from src.common.schemas.events import EventsSchema; EventsSchema().to_json_schema_file('models/schemas/events_v1.json')"
+	python -c "from src.common.schemas.detections import DetectionsSchema; DetectionsSchema().to_json_schema_file('models/schemas/detections_v1.json')"
+	python -c "from src.common.schemas.metadata import MetadataSchema; MetadataSchema().to_json_schema_file('models/schemas/metadata_v1.json')"
 
 ge:
 	@echo "🧪 Running Great Expectations tests..."
