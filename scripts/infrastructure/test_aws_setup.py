@@ -19,9 +19,9 @@ import argparse
 from datetime import datetime
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.wildlife_pipeline.cloud.config import CloudConfig
+from src.odin.config import OdinConfig
 
 
 def test_s3_access(bucket_name: str = "wildlife-pipeline-test"):
@@ -195,11 +195,11 @@ def test_cloud_config():
     
     try:
         # Test local profile
-        local_config = CloudConfig.from_profile("local")
+        local_config = OdinConfig()
         print(f"✅ Local profile loaded successfully")
         
         # Test cloud profile
-        cloud_config = CloudConfig.from_profile("cloud")
+        cloud_config = OdinConfig()
         print(f"✅ Cloud profile loaded successfully")
         
         # Test storage adapter creation

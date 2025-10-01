@@ -54,11 +54,11 @@ destroy-local:
 
 # AWS Production
 deploy-aws:
-	@echo "☁️ Deploying to AWS..."
+	@echo "☁️ Deploying to AWS (EU-NORTH-1 ONLY)..."
 	export AWS_DEFAULT_REGION=eu-north-1
-	chmod +x src/odin/infrastructure/scripts/deploy_aws.sh
-	./src/odin/infrastructure/scripts/deploy_aws.sh
-	@echo "✅ AWS deployment completed!"
+	chmod +x src/odin/aws/infrastructure/scripts/deploy_aws.sh
+	./src/odin/aws/infrastructure/scripts/deploy_aws.sh
+	@echo "✅ AWS deployment completed in EU-NORTH-1!"
 
 run-aws:
 	@echo "🏃 Running pipeline in AWS..."

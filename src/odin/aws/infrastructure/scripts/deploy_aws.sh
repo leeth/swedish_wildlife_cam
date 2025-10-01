@@ -3,21 +3,25 @@
 
 set -e
 
-# Configuration
-REGION="${AWS_DEFAULT_REGION:-eu-north-1}"
-BUCKET_NAME="${BUCKET_NAME:-wildlife-pipeline-$(date +%s)}"
+# Configuration - KUN EU-NORTH-1
+export AWS_DEFAULT_REGION=eu-north-1
+REGION="eu-north-1"
+BUCKET_NAME="${BUCKET_NAME:-wildlife-pipeline-test}"
 STACK_NAME="${STACK_NAME:-wildlife-pipeline}"
 
 echo "🚀 Deploying wildlife pipeline to AWS..."
 
-# Create S3 bucket
-echo "📦 Creating S3 bucket..."
-aws s3 mb s3://$BUCKET_NAME --region $REGION
+# Use existing S3 bucket
+echo "📦 Using existing S3 bucket: $BUCKET_NAME"
+aws s3 ls s3://$BUCKET_NAME --region $REGION || {
+    echo "❌ Bucket $BUCKET_NAME does not exist. Please create it first."
+    exit 1
+}
 
 # Deploy CloudFormation stack
 echo "☁️ Deploying CloudFormation stack..."
 aws cloudformation deploy \
-    --template-file infra/cloudformation/template.yaml \
+    --template-file src/odin/aws/infrastructure/cloudformation/template.yaml \
     --stack-name $STACK_NAME \
     --parameter-overrides \
         BucketName=$BUCKET_NAME \
