@@ -35,3 +35,9 @@ docker-tmp/
 
 # Docker logs
 docker-logs/
+
+# Application logs (cattle principle - no persistence)
+logs/
+*.log
+*.pid
+*.tmp
