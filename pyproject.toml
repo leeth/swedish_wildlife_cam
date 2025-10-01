@@ -71,7 +71,7 @@ gpu = [
     "torch==2.1.0+cu118",
     "torchvision==0.16.0+cu118", 
     "tensorrt==8.6.1",
-    "onnx==1.15.0",
+    "onnx==1.19.0",
     "onnxruntime-gpu==1.16.3",
     "triton==2.1.0",
 ]
@@ -80,7 +80,7 @@ gpu = [
 cpu = [
     "torch==2.1.0+cpu",
     "torchvision==0.16.0+cpu",
-    "onnx==1.15.0", 
+    "onnx==1.19.0", 
     "onnxruntime==1.16.3",
 ]
 
