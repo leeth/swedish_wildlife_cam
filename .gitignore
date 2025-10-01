@@ -17,3 +17,21 @@ location_classifier.db
 SECURITY_REVIEW.md
 conf/docker/postgres-data/
 conf/docker/redis-data/
+
+# Docker data directories (cattle principle - no persistence)
+conf/docker/postgres-data/
+conf/docker/redis-data/
+conf/docker/minio-data/
+conf/docker/localstack-data/
+conf/docker/*-data/
+
+# Docker volumes (cattle principle)
+docker-data/
+.docker-data/
+
+# Docker temporary files
+.docker/
+docker-tmp/
+
+# Docker logs
+docker-logs/
