@@ -15,3 +15,5 @@ aws-test-credentials.json
 # AWS credentials and sensitive files
 location_classifier.db
 SECURITY_REVIEW.md
+conf/docker/postgres-data/
+conf/docker/redis-data/
