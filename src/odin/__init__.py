@@ -9,20 +9,25 @@ This module provides orchestration and management functionality:
 - Logging and monitoring
 """
 
-from .manager import CostOptimizationManager
-from .batch_workflow import BatchWorkflowManager
-from .config import CostOptimizationConfig
-from .stage3_downloader import Stage3OutputDownloader
-from .pipeline import PipelineManager
-from .infrastructure import InfrastructureManager
+from .config import OdinConfig, CostOptimizationConfig
 from .validation import ValidationManager
+from .run_report import RunReportGenerator
+from .stage3_downloader import Stage3OutputDownloader
+
+# Import from submodules
+from .aws import InfrastructureManager, PipelineManager, CostOptimizationManager, BatchWorkflowManager
+from .local import LocalInfrastructureManager, LocalPipelineManager
 
 __all__ = [
-    "CostOptimizationManager",
-    "BatchWorkflowManager", 
-    "Stage3OutputDownloader",
+    "OdinConfig",
     "CostOptimizationConfig",
-    "PipelineManager",
-    "InfrastructureManager",
     "ValidationManager",
+    "RunReportGenerator",
+    "Stage3OutputDownloader",
+    "InfrastructureManager",
+    "PipelineManager", 
+    "CostOptimizationManager",
+    "BatchWorkflowManager",
+    "LocalInfrastructureManager",
+    "LocalPipelineManager",
 ]

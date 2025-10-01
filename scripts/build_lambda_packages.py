@@ -34,15 +34,18 @@ def build_lambda_package(lambda_name, source_dir):
     if src_dir.exists():
         shutil.copytree(src_dir, build_dir / "src", dirs_exist_ok=True)
     
-    # Create a simple requirements.txt if it doesn't exist
+    # Use minimal requirements for Lambda
     req_file = build_dir / "requirements.txt"
-    if not req_file.exists():
-        req_file.write_text("boto3\n")
+    req_file.write_text("boto3>=1.34.0\n")
     
-    # Install dependencies
+    # Install dependencies using clean venv
     print(f"Installing dependencies for {lambda_name}...")
+    venv_python = Path("venv-clean/bin/python")
+    if not venv_python.exists():
+        venv_python = sys.executable
+    
     subprocess.run([
-        sys.executable, "-m", "pip", "install", 
+        str(venv_python), "-m", "pip", "install", 
         "-r", str(req_file), 
         "-t", str(build_dir)
     ], check=True)

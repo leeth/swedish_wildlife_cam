@@ -19,25 +19,24 @@ help:
 	@echo "  run-aws            - Run pipeline in AWS"
 	@echo ""
 	@echo "Development:"
-	@echo "  build-docker       - Build Docker images"
 	@echo "  test-local         - Run local tests"
 
 # LocalStack Development
 up-localstack:
 	@echo "🚀 Starting LocalStack..."
-	docker-compose up -d localstack
+	docker-compose -f conf/docker/docker-compose.yml up -d localstack
 	@echo "⏳ Waiting for LocalStack to be ready..."
 	sleep 15
 	@echo "✅ LocalStack is ready!"
 
 down-localstack:
 	@echo "🛑 Stopping LocalStack..."
-	docker-compose down
+	docker-compose -f conf/docker/docker-compose.yml down
 
 deploy-local: up-localstack
 	@echo "📦 Deploying to LocalStack..."
-	chmod +x infra/scripts/deploy_localstack.sh
-	./infra/scripts/deploy_localstack.sh
+	chmod +x src/odin/infrastructure/scripts/deploy_localstack.sh
+	./src/odin/infrastructure/scripts/deploy_localstack.sh
 	@echo "✅ LocalStack deployment completed!"
 
 run-local:
@@ -57,8 +56,8 @@ destroy-local:
 deploy-aws:
 	@echo "☁️ Deploying to AWS..."
 	export AWS_DEFAULT_REGION=eu-north-1
-	chmod +x infra/scripts/deploy_aws.sh
-	./infra/scripts/deploy_aws.sh
+	chmod +x src/odin/infrastructure/scripts/deploy_aws.sh
+	./src/odin/infrastructure/scripts/deploy_aws.sh
 	@echo "✅ AWS deployment completed!"
 
 run-aws:
@@ -70,10 +69,6 @@ run-aws:
 	@echo "  --input '{\"input_uri\":\"s3://your-bucket/raw/cam01/\",\"output_uri\":\"s3://your-bucket/out/run_001/\",\"budget_dkk\":25,\"use_spot\":true,\"max_job_duration\":1800}'"
 
 # Development
-build-docker:
-	@echo "🐳 Building Docker images..."
-	docker build -t wildlife-detector:latest -f docker/munin-detector/Dockerfile .
-	@echo "✅ Docker images built!"
 
 test-local:
 	@echo "🧪 Running local tests..."
@@ -83,7 +78,7 @@ test-local:
 # Utility targets
 logs-local:
 	@echo "📋 Showing LocalStack logs..."
-	docker-compose logs -f localstack
+	docker-compose -f conf/docker/docker-compose.yml logs -f localstack
 
 status-local:
 	@echo "📊 LocalStack status:"
@@ -121,10 +116,11 @@ doctor-local:
 	@echo ""
 	@echo "✅ LocalStack health check completed!"
 
+
 # Clean up
 clean:
 	@echo "🧹 Cleaning up..."
-	docker-compose down -v
+	docker-compose -f conf/docker/docker-compose.yml down -v
 	docker system prune -f
 	@echo "✅ Cleanup completed!"
 

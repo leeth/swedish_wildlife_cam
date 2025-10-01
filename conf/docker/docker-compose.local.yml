@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'  # Obsolete attribute removed
 
 services:
   # LocalStack - AWS API Emulator
@@ -67,7 +67,7 @@ services:
   wildlife-worker:
     build:
       context: .
-      dockerfile: Dockerfile.wildlife
+      dockerfile: conf/docker/Dockerfile.wildlife
     container_name: wildlife-worker
     environment:
       - AWS_ENDPOINT_URL=http://localstack:4566
@@ -92,30 +92,6 @@ services:
     profiles:
       - worker
 
-  # Wildlife Processing Scheduler
-  wildlife-scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile.scheduler
-    container_name: wildlife-scheduler
-    environment:
-      - AWS_ENDPOINT_URL=http://localstack:4566
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - AWS_DEFAULT_REGION=eu-north-1
-      - REDIS_URL=redis://redis:6379
-      - POSTGRES_URL=postgresql://wildlife:wildlife123@postgres:5432/wildlife
-    volumes:
-      - "./test_data:/app/test_data:ro"
-      - "./output:/app/output"
-    depends_on:
-      - localstack
-      - redis
-      - postgres
-    networks:
-      - wildlife-network
-    profiles:
-      - scheduler
 
 networks:
   wildlife-network:

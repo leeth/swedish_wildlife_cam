@@ -1,0 +1,16 @@
+{
+  "jobQueueName": "wildlife-detection-queue",
+  "state": "ENABLED",
+  "priority": 1,
+  "computeEnvironmentOrder": [
+    {
+      "order": 1,
+      "computeEnvironment": "wildlife-detection-compute"
+    }
+  ],
+  "tags": {
+    "Project": "WildlifePipeline",
+    "Environment": "${Environment}"
+  }
+}
+

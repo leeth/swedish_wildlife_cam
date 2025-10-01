@@ -12,6 +12,94 @@ import yaml
 
 
 @dataclass
+class OdinConfig:
+    """
+    Main Odin configuration class.
+    
+    This class manages all configuration for the Odin infrastructure system,
+    including both local development and AWS production environments.
+    
+    Attributes:
+        name: Project name
+        version: Project version
+        description: Project description
+        provider: Infrastructure provider ('local' or 'aws')
+        region: AWS region for deployment
+        cost_optimized: Whether to use cost optimization features
+        stack_name: CloudFormation stack name
+    """
+    
+    # Basic configuration
+    name: str = "Wildlife Processing World"
+    version: str = "1.0.0"
+    description: str = "Complete wildlife detection pipeline"
+    
+    # Infrastructure configuration
+    provider: str = "local"
+    region: str = "eu-north-1"
+    cost_optimized: bool = False
+    stack_name: str = "wildlife-stack"
+    
+    def __init__(self, config_path: str = None, **kwargs):
+        """Initialize configuration with optional parameters."""
+        if config_path:
+            config = self.from_file(config_path)
+            for key, value in config.__dict__.items():
+                setattr(self, key, value)
+        
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+    
+    @classmethod
+    def from_file(cls, config_path: str) -> 'OdinConfig':
+        """Load configuration from YAML file."""
+        config_path = Path(config_path)
+        if not config_path.exists():
+            raise FileNotFoundError(f"Configuration file not found: {config_path}")
+
+        with open(config_path) as f:
+            config_data = yaml.safe_load(f)
+
+        return cls(**config_data)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary."""
+        return {
+            'name': self.name,
+            'version': self.version,
+            'description': self.description,
+            'provider': self.provider,
+            'region': self.region,
+            'cost_optimized': self.cost_optimized,
+            'stack_name': self.stack_name
+        }
+    
+    def get_provider(self) -> str:
+        """Get the infrastructure provider."""
+        return self.provider
+    
+    def get_region(self) -> str:
+        """Get the AWS region."""
+        return self.region
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get configuration value by key with dot notation support."""
+        if '.' in key:
+            # Handle nested keys like 'infrastructure.localstack.endpoint'
+            keys = key.split('.')
+            value = self.__dict__
+            for k in keys:
+                if isinstance(value, dict) and k in value:
+                    value = value[k]
+                else:
+                    return default
+            return value
+        else:
+            return getattr(self, key, default)
+
+
+@dataclass
 class CostOptimizationConfig:
     """Configuration for cost optimization features."""
 

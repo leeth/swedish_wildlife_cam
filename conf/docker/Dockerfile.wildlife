@@ -30,7 +30,10 @@ RUN pip install --no-cache-dir \
 
 # Copy source code
 COPY src/ ./src/
-COPY test_data/ ./test_data/
+
+# Create test_data directory (will be empty if not provided)
+RUN mkdir -p ./test_data
+COPY test_data/ ./test_data/ 2>/dev/null || true
 
 # Create output directory
 RUN mkdir -p /app/output
