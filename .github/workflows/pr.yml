@@ -24,7 +24,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       
       - name: Cache pip dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -59,7 +59,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       
       - name: Cache mypy
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/mypy
           key: ${{ runner.os }}-mypy-${{ hashFiles('**/requirements.txt') }}
@@ -91,7 +91,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       
       - name: Cache pip dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
