@@ -11,7 +11,7 @@ for grouping nearby wildlife camera locations. It provides:
 - Database integration for cluster persistence
 """
 
-import logging
+# Removed unused import logging
 import math
 import sqlite3
 from dataclasses import dataclass
@@ -20,8 +20,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from common.core.base import BaseProcessor
-from common.exceptions import ProcessingError, ValidationError
-from common.utils.logging_utils import get_logger, ProcessingTimer
+from common.exceptions import ValidationError
+from common.utils.logging_utils import get_logger
 from common.utils.gps_utils import calculate_distance_meters
 from .data_models import (
     ClusterBoundary,
@@ -49,19 +49,19 @@ class GPSClusterManager(BaseProcessor):
         self.db_path = db_path
         self.logger = get_logger(self.__class__.__name__)
         self.cluster_radius_meters = cluster_radius_meters  # 5m radius = 10m diameter
-        
+
         # Validate parameters
         if cluster_radius_meters <= 0:
             raise ValidationError("Cluster radius must be positive")
-            
+
         self._init_database()
 
     def process(self, input_data: Any) -> Any:
         """Process GPS clustering request.
-        
+
         Args:
             input_data: GPS points or configuration for clustering
-            
+
         Returns:
             Clustering results
         """
@@ -72,7 +72,7 @@ class GPSClusterManager(BaseProcessor):
             gps_points = input_data['gps_points']
         else:
             raise ValidationError("Input data must be GPS points or configuration dictionary")
-            
+
         return self.cluster_gps_points(gps_points)
 
     def _init_database(self):

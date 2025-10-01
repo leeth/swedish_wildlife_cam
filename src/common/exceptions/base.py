@@ -5,10 +5,10 @@ Base exceptions for the wildlife pipeline.
 
 class WildlifePipelineError(Exception):
     """Base exception for all wildlife pipeline errors."""
-    
+
     def __init__(self, message: str, error_code: str = None):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             error_code: Optional error code for categorization

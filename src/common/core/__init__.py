@@ -7,7 +7,7 @@ from .config import ConfigManager, PipelineConfig
 
 __all__ = [
     "BaseProcessor",
-    "BaseDetector", 
+    "BaseDetector",
     "BaseAnalyzer",
     "ConfigManager",
     "PipelineConfig",

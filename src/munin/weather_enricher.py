@@ -13,13 +13,13 @@ Supported APIs:
 - OpenWeatherMap (alternative)
 """
 
-import logging
+# Removed unused import logging
 import requests
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from enum import Enum
 
 from ..common.core.base import BaseProcessor
@@ -74,7 +74,7 @@ class WeatherEnricher(BaseProcessor):
         self.db_path = db_path
         self.logger = get_logger(self.__class__.__name__)
         self.api_keys = api_keys or {}
-        
+
         # API endpoints and configurations
         self.api_configs = {
             WeatherProvider.ACCUWEATHER: {
@@ -101,7 +101,7 @@ class WeatherEnricher(BaseProcessor):
                 'requires_location_key': False
             }
         }
-        
+
         self._init_database()
 
     def _init_database(self):
@@ -158,10 +158,10 @@ class WeatherEnricher(BaseProcessor):
 
     def process(self, input_data: Any) -> Any:
         """Process weather enrichment request.
-        
+
         Args:
             input_data: Weather request or GPS cluster data
-            
+
         Returns:
             Weather enrichment results
         """
@@ -174,10 +174,10 @@ class WeatherEnricher(BaseProcessor):
 
     def enrich_cluster_weather(self, cluster_data: Dict[str, Any]) -> Dict[str, Any]:
         """Enrich GPS cluster with weather data.
-        
+
         Args:
             cluster_data: Dictionary containing cluster information
-            
+
         Returns:
             Weather enrichment results
         """
@@ -185,15 +185,15 @@ class WeatherEnricher(BaseProcessor):
         start_date = cluster_data.get('start_date')
         end_date = cluster_data.get('end_date')
         provider = WeatherProvider(cluster_data.get('provider', 'accuweather'))
-        
+
         if not cluster_id:
             raise ValidationError("cluster_id is required")
-            
+
         # Get cluster information
         cluster = self._get_cluster_info(cluster_id)
         if not cluster:
             raise ProcessingError(f"Cluster {cluster_id} not found")
-            
+
         # Create weather request
         weather_request = WeatherRequest(
             latitude=cluster['center_latitude'],
@@ -202,16 +202,16 @@ class WeatherEnricher(BaseProcessor):
             end_date=end_date or datetime.now(),
             provider=provider
         )
-        
+
         return self.enrich_weather_data(weather_request, cluster_id)
 
     def enrich_weather_data(self, request: WeatherRequest, cluster_id: Optional[str] = None) -> Dict[str, Any]:
         """Enrich weather data for given coordinates and time range.
-        
+
         Args:
             request: Weather data request
             cluster_id: Optional cluster ID for association
-            
+
         Returns:
             Weather enrichment results
         """
@@ -222,16 +222,16 @@ class WeatherEnricher(BaseProcessor):
                 if cached_data:
                     self.logger.info(f"Using cached weather data for {request.latitude}, {request.longitude}")
                     return cached_data
-                
+
                 # Fetch weather data from API
                 weather_data = self._fetch_weather_data(request)
-                
+
                 # Store in database
                 stored_count = self._store_weather_data(weather_data, cluster_id)
-                
+
                 # Cache the response
                 self._cache_weather_data(request, weather_data)
-                
+
                 return {
                     "success": True,
                     "observations_count": len(weather_data),
@@ -246,7 +246,7 @@ class WeatherEnricher(BaseProcessor):
                         "end": request.end_date.isoformat()
                     }
                 }
-                
+
             except Exception as e:
                 self.logger.error(f"Weather enrichment failed: {e}")
                 raise ProcessingError(f"Weather enrichment failed: {e}")
@@ -256,43 +256,43 @@ class WeatherEnricher(BaseProcessor):
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 SELECT cluster_id, center_latitude, center_longitude, name
                 FROM gps_clusters
                 WHERE cluster_id = ?
             """, (cluster_id,))
-            
+
             row = cursor.fetchone()
             return dict(row) if row else None
 
     def _get_cached_weather(self, request: WeatherRequest) -> Optional[Dict[str, Any]]:
         """Check for cached weather data."""
         cache_key = self._generate_cache_key(request)
-        
+
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 SELECT response_data FROM weather_cache
                 WHERE cache_key = ? AND expires_at > ?
             """, (cache_key, datetime.now().isoformat()))
-            
+
             row = cursor.fetchone()
             if row:
                 import json
                 return json.loads(row[0])
-        
+
         return None
 
     def _cache_weather_data(self, request: WeatherRequest, weather_data: List[WeatherObservation]):
         """Cache weather data for future use."""
         cache_key = self._generate_cache_key(request)
         expires_at = datetime.now() + timedelta(hours=24)  # Cache for 24 hours
-        
+
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             # Convert weather data to JSON
             import json
             data_json = json.dumps([
@@ -314,7 +314,7 @@ class WeatherEnricher(BaseProcessor):
                 }
                 for obs in weather_data
             ])
-            
+
             cursor.execute("""
                 INSERT OR REPLACE INTO weather_cache
                 (cache_key, provider, latitude, longitude, date, response_data, created_at, expires_at)
@@ -329,7 +329,7 @@ class WeatherEnricher(BaseProcessor):
                 datetime.now().isoformat(),
                 expires_at.isoformat()
             ))
-            
+
             conn.commit()
 
     def _generate_cache_key(self, request: WeatherRequest) -> str:
@@ -340,7 +340,7 @@ class WeatherEnricher(BaseProcessor):
         """Fetch weather data from the specified provider."""
         provider = request.provider
         config = self.api_configs[provider]
-        
+
         if provider == WeatherProvider.ACCUWEATHER:
             return self._fetch_accuweather_data(request, config)
         elif provider == WeatherProvider.YR_NO:
@@ -357,19 +357,19 @@ class WeatherEnricher(BaseProcessor):
         api_key = self.api_keys.get('accuweather')
         if not api_key:
             raise ProcessingError("AccuWeather API key not provided")
-        
+
         # Get location key
         location_key = self._get_accuweather_location_key(
             request.latitude, request.longitude, api_key, config
         )
-        
+
         if not location_key:
             raise ProcessingError("Could not obtain AccuWeather location key")
-        
+
         # Fetch historical data
         weather_data = []
         current_date = request.start_date
-        
+
         while current_date <= request.end_date:
             try:
                 url = f"{config['base_url']}{config['historical_url'].format(location_key=location_key)}"
@@ -377,23 +377,23 @@ class WeatherEnricher(BaseProcessor):
                     'apikey': api_key,
                     'details': 'true'
                 }
-                
+
                 response = requests.get(url, params=params, timeout=30)
                 response.raise_for_status()
-                
+
                 data = response.json()
                 for item in data:
                     obs = self._parse_accuweather_observation(item, request.latitude, request.longitude, location_key)
                     if obs:
                         weather_data.append(obs)
-                
+
                 current_date += timedelta(days=1)
-                
+
             except requests.RequestException as e:
                 self.logger.warning(f"Failed to fetch AccuWeather data for {current_date}: {e}")
                 current_date += timedelta(days=1)
                 continue
-        
+
         return weather_data
 
     def _get_accuweather_location_key(self, latitude: float, longitude: float, api_key: str, config: Dict[str, str]) -> Optional[str]:
@@ -404,13 +404,13 @@ class WeatherEnricher(BaseProcessor):
                 'apikey': api_key,
                 'q': f"{latitude},{longitude}"
             }
-            
+
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
-            
+
             data = response.json()
             return data.get('Key')
-            
+
         except requests.RequestException as e:
             self.logger.error(f"Failed to get AccuWeather location key: {e}")
             return None
@@ -421,9 +421,9 @@ class WeatherEnricher(BaseProcessor):
             timestamp_str = data.get('LocalObservationDateTime')
             if not timestamp_str:
                 return None
-                
+
             timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-            
+
             return WeatherObservation(
                 timestamp=timestamp,
                 latitude=latitude,
@@ -454,17 +454,17 @@ class WeatherEnricher(BaseProcessor):
                 'start': request.start_date.isoformat(),
                 'end': request.end_date.isoformat()
             }
-            
+
             headers = {
                 'User-Agent': 'Wildlife-Pipeline/1.0 (contact@example.com)'
             }
-            
+
             response = requests.get(url, params=params, headers=headers, timeout=30)
             response.raise_for_status()
-            
+
             data = response.json()
             return self._parse_yr_data(data, request.latitude, request.longitude)
-            
+
         except requests.RequestException as e:
             self.logger.error(f"Failed to fetch YR.no data: {e}")
             return []
@@ -472,18 +472,18 @@ class WeatherEnricher(BaseProcessor):
     def _parse_yr_data(self, data: Dict[str, Any], latitude: float, longitude: float) -> List[WeatherObservation]:
         """Parse YR.no weather data."""
         observations = []
-        
+
         try:
             timeseries = data.get('properties', {}).get('timeseries', [])
-            
+
             for item in timeseries:
                 timestamp_str = item.get('time')
                 if not timestamp_str:
                     continue
-                    
+
                 timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
                 details = item.get('data', {}).get('instant', {}).get('details', {})
-                
+
                 obs = WeatherObservation(
                     timestamp=timestamp,
                     latitude=latitude,
@@ -499,12 +499,12 @@ class WeatherEnricher(BaseProcessor):
                     uv_index=details.get('ultraviolet_index_clear_sky'),
                     provider='yr_no'
                 )
-                
+
                 observations.append(obs)
-                
+
         except Exception as e:
             self.logger.warning(f"Failed to parse YR.no data: {e}")
-        
+
         return observations
 
     def _fetch_visual_crossing_data(self, request: WeatherRequest, config: Dict[str, str]) -> List[WeatherObservation]:
@@ -512,7 +512,7 @@ class WeatherEnricher(BaseProcessor):
         api_key = self.api_keys.get('visual_crossing')
         if not api_key:
             raise ProcessingError("Visual Crossing API key not provided")
-        
+
         try:
             url = f"{config['base_url']}{config['historical_url']}/{request.latitude},{request.longitude}/{request.start_date.date()}/{request.end_date.date()}"
             params = {
@@ -520,13 +520,13 @@ class WeatherEnricher(BaseProcessor):
                 'include': 'hours',
                 'elements': 'datetime,temp,humidity,precip,windspeed,winddir,pressure,visibility,cloudcover,uvindex'
             }
-            
+
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
-            
+
             data = response.json()
             return self._parse_visual_crossing_data(data, request.latitude, request.longitude)
-            
+
         except requests.RequestException as e:
             self.logger.error(f"Failed to fetch Visual Crossing data: {e}")
             return []
@@ -534,21 +534,21 @@ class WeatherEnricher(BaseProcessor):
     def _parse_visual_crossing_data(self, data: Dict[str, Any], latitude: float, longitude: float) -> List[WeatherObservation]:
         """Parse Visual Crossing weather data."""
         observations = []
-        
+
         try:
             days = data.get('days', [])
-            
+
             for day in days:
                 date_str = day.get('datetime')
                 if not date_str:
                     continue
-                    
+
                 hours = day.get('hours', [])
-                
+
                 for hour in hours:
                     timestamp_str = f"{date_str}T{hour.get('datetime')}"
                     timestamp = datetime.fromisoformat(timestamp_str)
-                    
+
                     obs = WeatherObservation(
                         timestamp=timestamp,
                         latitude=latitude,
@@ -564,12 +564,12 @@ class WeatherEnricher(BaseProcessor):
                         uv_index=hour.get('uvindex'),
                         provider='visual_crossing'
                     )
-                    
+
                     observations.append(obs)
-                    
+
         except Exception as e:
             self.logger.warning(f"Failed to parse Visual Crossing data: {e}")
-        
+
         return observations
 
     def _fetch_openweathermap_data(self, request: WeatherRequest, config: Dict[str, str]) -> List[WeatherObservation]:
@@ -577,10 +577,10 @@ class WeatherEnricher(BaseProcessor):
         api_key = self.api_keys.get('openweathermap')
         if not api_key:
             raise ProcessingError("OpenWeatherMap API key not provided")
-        
+
         observations = []
         current_date = request.start_date
-        
+
         while current_date <= request.end_date:
             try:
                 # OpenWeatherMap One Call API 3.0
@@ -592,22 +592,22 @@ class WeatherEnricher(BaseProcessor):
                     'appid': api_key,
                     'units': 'metric'
                 }
-                
+
                 response = requests.get(url, params=params, timeout=30)
                 response.raise_for_status()
-                
+
                 data = response.json()
                 obs = self._parse_openweathermap_data(data, request.latitude, request.longitude)
                 if obs:
                     observations.append(obs)
-                
+
                 current_date += timedelta(days=1)
-                
+
             except requests.RequestException as e:
                 self.logger.warning(f"Failed to fetch OpenWeatherMap data for {current_date}: {e}")
                 current_date += timedelta(days=1)
                 continue
-        
+
         return observations
 
     def _parse_openweathermap_data(self, data: Dict[str, Any], latitude: float, longitude: float) -> Optional[WeatherObservation]:
@@ -615,7 +615,7 @@ class WeatherEnricher(BaseProcessor):
         try:
             current = data.get('current', {})
             timestamp = datetime.fromtimestamp(current.get('dt', 0))
-            
+
             return WeatherObservation(
                 timestamp=timestamp,
                 latitude=latitude,
@@ -639,12 +639,12 @@ class WeatherEnricher(BaseProcessor):
         """Store weather observations in database."""
         if not weather_data:
             return 0
-        
+
         stored_count = 0
-        
+
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             for obs in weather_data:
                 try:
                     cursor.execute("""
@@ -672,54 +672,54 @@ class WeatherEnricher(BaseProcessor):
                         obs.location_key,
                         datetime.now().isoformat()
                     ))
-                    
+
                     stored_count += 1
-                    
+
                 except Exception as e:
                     self.logger.warning(f"Failed to store weather observation: {e}")
                     continue
-            
+
             conn.commit()
-        
+
         return stored_count
 
-    def get_weather_for_cluster(self, cluster_id: str, start_date: Optional[datetime] = None, 
+    def get_weather_for_cluster(self, cluster_id: str, start_date: Optional[datetime] = None,
                               end_date: Optional[datetime] = None) -> List[Dict[str, Any]]:
         """Get weather data for a specific cluster."""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             query = """
                 SELECT * FROM weather_observations
                 WHERE cluster_id = ?
             """
             params = [cluster_id]
-            
+
             if start_date:
                 query += " AND timestamp >= ?"
                 params.append(start_date.isoformat())
-            
+
             if end_date:
                 query += " AND timestamp <= ?"
                 params.append(end_date.isoformat())
-            
+
             query += " ORDER BY timestamp"
-            
+
             cursor.execute(query, params)
             rows = cursor.fetchall()
-            
+
             return [dict(row) for row in rows]
 
     def get_weather_statistics(self) -> Dict[str, Any]:
         """Get weather data statistics."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             # Total weather observations
             cursor.execute("SELECT COUNT(*) FROM weather_observations")
             total_observations = cursor.fetchone()[0]
-            
+
             # Observations by provider
             cursor.execute("""
                 SELECT provider, COUNT(*) as count
@@ -727,14 +727,14 @@ class WeatherEnricher(BaseProcessor):
                 GROUP BY provider
             """)
             provider_stats = dict(cursor.fetchall())
-            
+
             # Date range
             cursor.execute("""
                 SELECT MIN(timestamp) as earliest, MAX(timestamp) as latest
                 FROM weather_observations
             """)
             date_range = cursor.fetchone()
-            
+
             return {
                 "total_observations": total_observations,
                 "provider_stats": provider_stats,
@@ -748,16 +748,16 @@ class WeatherEnricher(BaseProcessor):
         """Clean up expired weather cache entries."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 DELETE FROM weather_cache
                 WHERE expires_at < ?
             """, (datetime.now().isoformat(),))
-            
+
             deleted_count = cursor.rowcount
             conn.commit()
-            
+
             if deleted_count > 0:
                 self.logger.info(f"Cleaned up {deleted_count} expired cache entries")
-            
+
             return deleted_count

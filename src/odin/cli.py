@@ -27,13 +27,13 @@ Examples:
   python -m odin.cli aws cost report
         """
     )
-    
+
     subparsers = parser.add_subparsers(dest='environment', help='Environment to use')
-    
+
     # Local environment
     local_parser = subparsers.add_parser('local', help='Local development commands')
     local_parser.add_argument('command', nargs='*', help='Local command to execute')
-    
+
     # AWS environment
     aws_parser = subparsers.add_parser('aws', help='AWS production commands')
     aws_parser.add_argument('command', nargs='*', help='AWS command to execute')
@@ -43,7 +43,7 @@ Examples:
     if not args.environment:
         parser.print_help()
         return
-    
+
     try:
         if args.environment == 'local':
             # Import and run local CLI
@@ -51,14 +51,14 @@ Examples:
             # Reconstruct sys.argv for local CLI
             sys.argv = ['odin.cli_local'] + args.command
             local_main()
-            
+
         elif args.environment == 'aws':
             # Import and run AWS CLI
             from odin.cli_aws import main as aws_main
             # Reconstruct sys.argv for AWS CLI
             sys.argv = ['odin.cli_aws'] + args.command
             aws_main()
-            
+
         else:
             parser.print_help()
 

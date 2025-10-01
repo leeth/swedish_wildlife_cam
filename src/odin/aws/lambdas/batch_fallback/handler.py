@@ -6,7 +6,7 @@ Uses boto3.batch.submit_job and polls in Lambda for short duration.
 Only used when ENV=local.
 """
 
-import json
+# Removed unused import json
 import logging
 import time
 import boto3
@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     LocalStack fallback for Batch job submission.
-    
+
     Args:
         event: Batch job parameters
         context: Lambda context
-    
+
     Returns:
         Batch job result
     """
@@ -29,7 +29,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Check if we're in local environment
         if not _is_local_environment():
             raise Exception("Batch fallback only available in local environment")
-        
+
         # Extract batch parameters
         job_name = event.get("JobName")
         job_queue = event.get("JobQueue")
@@ -37,13 +37,13 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         container_overrides = event.get("ContainerOverrides", {})
         retry_strategy = event.get("RetryStrategy", {})
         timeout = event.get("Timeout", {})
-        
+
         if not all([job_name, job_queue, job_definition]):
             raise ValueError("Missing required batch parameters")
-        
+
         # Submit job using boto3
         batch_client = boto3.client('batch')
-        
+
         submit_params = {
             'jobName': job_name,
             'jobQueue': job_queue,
@@ -52,30 +52,30 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'retryStrategy': retry_strategy,
             'timeout': timeout
         }
-        
+
         logger.info(f"Submitting batch job: {job_name}")
         response = batch_client.submit_job(**submit_params)
-        
+
         job_id = response['jobId']
         logger.info(f"Batch job submitted with ID: {job_id}")
-        
+
         # Poll for job completion (short duration for Lambda)
         max_poll_time = 300  # 5 minutes max
         poll_interval = 10   # 10 seconds
         start_time = time.time()
-        
+
         while time.time() - start_time < max_poll_time:
             try:
                 job_status = batch_client.describe_jobs(jobs=[job_id])
-                
+
                 if not job_status['jobs']:
                     raise Exception(f"Job {job_id} not found")
-                
+
                 job = job_status['jobs'][0]
                 job_status_name = job['jobStatus']
-                
+
                 logger.info(f"Job {job_id} status: {job_status_name}")
-                
+
                 if job_status_name in ['SUCCEEDED', 'FAILED']:
                     # Job completed
                     return {
@@ -90,14 +90,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'reason': job.get('reason'),
                         'statusReason': job.get('statusReason')
                     }
-                
+
                 # Wait before next poll
                 time.sleep(poll_interval)
-                
+
             except Exception as e:
                 logger.warning(f"Error polling job {job_id}: {e}")
                 time.sleep(poll_interval)
-        
+
         # Timeout reached
         logger.warning(f"Job {job_id} polling timeout after {max_poll_time}s")
         return {
@@ -106,7 +106,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'jobStatus': 'TIMEOUT',
             'reason': f'Polling timeout after {max_poll_time}s'
         }
-        
+
     except Exception as e:
         logger.error(f"Batch fallback failed: {e}")
         raise Exception("BatchFallbackError") from e

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional, Any, Dict
+from typing import TYPE_CHECKING, List, Any
 from pathlib import Path
 
 from ..common.core.base import BaseDetector
@@ -40,7 +40,7 @@ class YOLODetector(BaseDetector):
         self.conf = conf
         self.iou = iou
         self.logger = get_logger(self.__class__.__name__)
-        
+
         # Validate parameters
         if not 0 <= conf <= 1:
             raise ValidationError("Confidence threshold must be between 0 and 1")
@@ -55,7 +55,7 @@ class YOLODetector(BaseDetector):
             raise ProcessingError(
                 "Ultralytics not installed. Please `pip install ultralytics`."
             ) from e
-        
+
         try:
             self.logger.info(f"Loading YOLO model from {self.model_path}")
             self.model = YOLO(str(self.model_path))
@@ -65,26 +65,26 @@ class YOLODetector(BaseDetector):
 
     def detect(self, image_data: Any) -> List[DetectionResult]:
         """Detect objects in the image.
-        
+
         Args:
             image_data: Image data (path, numpy array, or PIL Image)
-            
+
         Returns:
             List of detection results
         """
         if self.model is None:
             raise ProcessingError("Model not loaded. Call load_model() first.")
-            
+
         # Convert input to path if needed
         if isinstance(image_data, (str, Path)):
             image_path = Path(image_data)
         else:
             # For other types, we'll need to handle them differently
             raise ValidationError(f"Unsupported image data type: {type(image_data)}")
-            
+
         if not image_path.exists():
             raise ValidationError(f"Image file not found: {image_path}")
-            
+
         try:
             with ProcessingTimer(self.logger, f"YOLO detection on {image_path}"):
                 results = self.model.predict(
@@ -94,34 +94,34 @@ class YOLODetector(BaseDetector):
                     imgsz=1280,
                     verbose=False
                 )
-                
+
                 detections = self._process_results(results)
                 self.logger.info(f"YOLO detected {len(detections)} objects")
                 return detections
-                
+
         except Exception as e:
             raise ProcessingError(f"YOLO detection failed: {e}") from e
 
     def _process_results(self, results) -> List[DetectionResult]:
         """Process YOLO results into DetectionResult objects."""
         detections = []
-        
+
         if not results:
             return detections
-            
+
         result = results[0]
         names = result.names  # class id -> label
-        
+
         if result.boxes is None:
             return detections
-            
+
         for box in result.boxes:
             try:
                 cls_id = int(box.cls.item())
                 label = names.get(cls_id, str(cls_id))
                 conf = float(box.conf.item())
                 xyxy = [float(v) for v in box.xyxy[0].tolist()]
-                
+
                 detection = DetectionResult(
                     bbox=tuple(xyxy),
                     confidence=conf,
@@ -130,11 +130,11 @@ class YOLODetector(BaseDetector):
                     metadata={"detector": "YOLO", "model_path": str(self.model_path)}
                 )
                 detections.append(detection)
-                
+
             except Exception as e:
                 self.logger.warning(f"Failed to process detection: {e}")
                 continue
-                
+
         return detections
 
     def predict(self, image_path: Path) -> list[Detection]:

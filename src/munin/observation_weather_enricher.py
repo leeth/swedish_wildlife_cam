@@ -12,17 +12,17 @@ Key features:
 - Integrates with existing observation database
 """
 
-import logging
+# Removed unused import logging
 import requests
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from ..common.core.base import BaseProcessor
-from ..common.exceptions import ProcessingError, ValidationError
-from ..common.utils.logging_utils import get_logger, ProcessingTimer
+from ..common.exceptions import ValidationError
+from ..common.utils.logging_utils import get_logger
 
 
 @dataclass
@@ -52,11 +52,11 @@ class ObservationWeatherEnricher(BaseProcessor):
         self.db_path = db_path
         self.logger = get_logger(self.__class__.__name__)
         self.user_agent = user_agent
-        
+
         # YR.no API configuration
         self.base_url = "https://api.met.no/weatherapi"
         self.location_forecast_url = "/locationforecast/2.0/complete"
-        
+
         self._init_database()
 
     def _init_database(self):
@@ -112,10 +112,10 @@ class ObservationWeatherEnricher(BaseProcessor):
 
     def process(self, input_data: Any) -> Any:
         """Process weather enrichment request.
-        
+
         Args:
             input_data: Observation data or list of observations
-            
+
         Returns:
             Weather enrichment results
         """
@@ -128,7 +128,7 @@ class ObservationWeatherEnricher(BaseProcessor):
 
     def enrich_single_observation(self, observation_data: Dict[str, Any]) -> Dict[str, Any]:
         """Enrich a single positive observation with weather data.
-        
+
         Args:
             observation_data: Dictionary containing observation information
                 - observation_id: Unique observation ID
@@ -136,7 +136,7 @@ class ObservationWeatherEnricher(BaseProcessor):
                 - latitude: GPS latitude
                 - longitude: GPS longitude
                 - (optional) camera_id: Camera identifier
-                
+
         Returns:
             Weather enrichment results
         """
@@ -144,76 +144,76 @@ class ObservationWeatherEnricher(BaseProcessor):
         timestamp = observation_data.get('timestamp')
         latitude = observation_data.get('latitude')
         longitude = observation_data.get('longitude')
-        
+
         if not all([observation_id, timestamp, latitude, longitude]):
             raise ValidationError("observation_id, timestamp, latitude, and longitude are required")
-        
+
         # Convert timestamp if it's a string
         if isinstance(timestamp, str):
             timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-        
-        with ProcessingTimer(self.logger, f"Weather enrichment for observation {observation_id}"):
-            try:
-                # Check if already enriched
-                existing_weather = self._get_weather_for_observation(observation_id)
-                if existing_weather:
-                    self.logger.info(f"Observation {observation_id} already has weather data")
-                    return {
-                        "success": True,
-                        "observation_id": observation_id,
-                        "already_enriched": True,
-                        "weather_data": existing_weather
-                    }
-                
-                # Fetch weather data from YR.no
-                weather_data = self._fetch_weather_for_observation(
-                    latitude, longitude, timestamp
-                )
-                
-                if not weather_data:
-                    self.logger.warning(f"No weather data found for observation {observation_id}")
-                    return {
-                        "success": False,
-                        "observation_id": observation_id,
-                        "error": "No weather data available"
-                    }
-                
-                # Store weather data
-                self._store_weather_for_observation(observation_id, weather_data)
-                
+
+        # with ProcessingTimer(self.logger, f"Weather enrichment for observation {observation_id}"):
+        try:
+            # Check if already enriched
+            existing_weather = self._get_weather_for_observation(observation_id)
+            if existing_weather:
+                self.logger.info(f"Observation {observation_id} already has weather data")
                 return {
                     "success": True,
                     "observation_id": observation_id,
-                    "weather_data": {
-                        "timestamp": weather_data.timestamp.isoformat(),
-                        "temperature": weather_data.temperature,
-                        "humidity": weather_data.humidity,
-                        "precipitation": weather_data.precipitation,
-                        "wind_speed": weather_data.wind_speed,
-                        "wind_direction": weather_data.wind_direction,
-                        "pressure": weather_data.pressure,
-                        "visibility": weather_data.visibility,
-                        "cloud_cover": weather_data.cloud_cover,
-                        "uv_index": weather_data.uv_index,
-                        "dew_point": weather_data.dew_point,
-                        "wind_gust": weather_data.wind_gust
-                    }
+                    "already_enriched": True,
+                    "weather_data": existing_weather
                 }
-                
-            except Exception as e:
-                self.logger.error(f"Weather enrichment failed for observation {observation_id}: {e}")
+
+            # Fetch weather data from YR.no
+            weather_data = self._fetch_weather_for_observation(
+                latitude, longitude, timestamp
+            )
+
+            if not weather_data:
+                self.logger.warning(f"No weather data found for observation {observation_id}")
                 return {
                     "success": False,
                     "observation_id": observation_id,
-                    "error": str(e)
+                    "error": "No weather data available"
                 }
+
+            # Store weather data
+            self._store_weather_for_observation(observation_id, weather_data)
+
+            return {
+                "success": True,
+                "observation_id": observation_id,
+                "weather_data": {
+                    "timestamp": weather_data.timestamp.isoformat(),
+                    "temperature": weather_data.temperature,
+                    "humidity": weather_data.humidity,
+                    "precipitation": weather_data.precipitation,
+                    "wind_speed": weather_data.wind_speed,
+                    "wind_direction": weather_data.wind_direction,
+                    "pressure": weather_data.pressure,
+                    "visibility": weather_data.visibility,
+                    "cloud_cover": weather_data.cloud_cover,
+                    "uv_index": weather_data.uv_index,
+                    "dew_point": weather_data.dew_point,
+                    "wind_gust": weather_data.wind_gust
+                }
+            }
+
+        except Exception as e:
+            self.logger.error(f"Weather enrichment failed for observation {observation_id}: {e}")
+            return {
+                "success": False,
+                "observation_id": observation_id,
+                "error": str(e)
+            }
 
     def enrich_observations_batch(self, observations: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Enrich a batch of positive observations with weather data.
-        
+
         Args:
             observations: List of observation dictionaries
-            
+
         Returns:
             Batch enrichment results
         """
@@ -224,12 +224,12 @@ class ObservationWeatherEnricher(BaseProcessor):
             "already_enriched": 0,
             "results": []
         }
-        
+
         for obs in observations:
             try:
                 result = self.enrich_single_observation(obs)
                 results["results"].append(result)
-                
+
                 if result["success"]:
                     if result.get("already_enriched"):
                         results["already_enriched"] += 1
@@ -237,7 +237,7 @@ class ObservationWeatherEnricher(BaseProcessor):
                         results["successful_enrichments"] += 1
                 else:
                     results["failed_enrichments"] += 1
-                    
+
             except Exception as e:
                 self.logger.error(f"Failed to enrich observation {obs.get('observation_id', 'unknown')}: {e}")
                 results["failed_enrichments"] += 1
@@ -246,21 +246,21 @@ class ObservationWeatherEnricher(BaseProcessor):
                     "observation_id": obs.get('observation_id', 'unknown'),
                     "error": str(e)
                 })
-        
+
         return results
 
     def enrich_positive_observations_from_db(self, days_back: int = 7) -> Dict[str, Any]:
         """Enrich all positive observations from the database.
-        
+
         Args:
             days_back: Number of days to look back for observations
-            
+
         Returns:
             Enrichment results
         """
         # Get positive observations from database
         positive_observations = self._get_positive_observations_from_db(days_back)
-        
+
         if not positive_observations:
             self.logger.info("No positive observations found in database")
             return {
@@ -269,9 +269,9 @@ class ObservationWeatherEnricher(BaseProcessor):
                 "failed_enrichments": 0,
                 "already_enriched": 0
             }
-        
+
         self.logger.info(f"Found {len(positive_observations)} positive observations to enrich")
-        
+
         # Enrich in batches
         batch_size = 10
         results = {
@@ -281,21 +281,21 @@ class ObservationWeatherEnricher(BaseProcessor):
             "already_enriched": 0,
             "results": []
         }
-        
+
         for i in range(0, len(positive_observations), batch_size):
             batch = positive_observations[i:i + batch_size]
             batch_result = self.enrich_observations_batch(batch)
-            
+
             results["successful_enrichments"] += batch_result["successful_enrichments"]
             results["failed_enrichments"] += batch_result["failed_enrichments"]
             results["already_enriched"] += batch_result["already_enriched"]
             results["results"].extend(batch_result["results"])
-            
+
             # Small delay between batches to be respectful to API
             if i + batch_size < len(positive_observations):
                 import time
                 time.sleep(1)
-        
+
         return results
 
     def _get_positive_observations_from_db(self, days_back: int) -> List[Dict[str, Any]]:
@@ -303,11 +303,11 @@ class ObservationWeatherEnricher(BaseProcessor):
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             # Query for positive observations with GPS data
             # This assumes you have an observations table with the structure from your pipeline
             cursor.execute("""
-                SELECT 
+                SELECT
                     observation_id,
                     timestamp,
                     latitude,
@@ -322,7 +322,7 @@ class ObservationWeatherEnricher(BaseProcessor):
                 AND timestamp >= datetime('now', '-{} days')
                 ORDER BY timestamp DESC
             """.format(days_back))
-            
+
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
 
@@ -331,16 +331,16 @@ class ObservationWeatherEnricher(BaseProcessor):
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 SELECT * FROM observation_weather
                 WHERE observation_id = ?
             """, (observation_id,))
-            
+
             row = cursor.fetchone()
             return dict(row) if row else None
 
-    def _fetch_weather_for_observation(self, latitude: float, longitude: float, 
+    def _fetch_weather_for_observation(self, latitude: float, longitude: float,
                                      timestamp: datetime) -> Optional[WeatherObservation]:
         """Fetch weather data for a specific observation."""
         try:
@@ -349,62 +349,62 @@ class ObservationWeatherEnricher(BaseProcessor):
             cached_data = self._get_cached_weather(cache_key)
             if cached_data:
                 return self._parse_cached_weather(cached_data, latitude, longitude, timestamp)
-            
+
             # Fetch from YR.no API
             url = f"{self.base_url}{self.location_forecast_url}"
             params = {
                 'lat': latitude,
                 'lon': longitude
             }
-            
+
             headers = {
                 'User-Agent': self.user_agent
             }
-            
+
             self.logger.info(f"Fetching weather data for {latitude}, {longitude} at {timestamp}")
             response = requests.get(url, params=params, headers=headers, timeout=30)
             response.raise_for_status()
-            
+
             data = response.json()
             weather_obs = self._parse_yr_data_for_observation(data, latitude, longitude, timestamp)
-            
+
             # Cache the response
             self._cache_weather_data(cache_key, latitude, longitude, timestamp.date(), data)
-            
+
             return weather_obs
-            
+
         except requests.RequestException as e:
             self.logger.error(f"Failed to fetch weather data: {e}")
             return None
 
-    def _parse_yr_data_for_observation(self, data: Dict[str, Any], latitude: float, 
+    def _parse_yr_data_for_observation(self, data: Dict[str, Any], latitude: float,
                                      longitude: float, target_timestamp: datetime) -> Optional[WeatherObservation]:
         """Parse YR.no data to find the closest weather observation to the target timestamp."""
         try:
             timeseries = data.get('properties', {}).get('timeseries', [])
-            
+
             # Find the closest timestamp to our target
             closest_obs = None
             min_time_diff = float('inf')
-            
+
             for item in timeseries:
                 timestamp_str = item.get('time')
                 if not timestamp_str:
                     continue
-                    
+
                 obs_timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
                 time_diff = abs((obs_timestamp - target_timestamp).total_seconds())
-                
+
                 if time_diff < min_time_diff:
                     min_time_diff = time_diff
                     closest_obs = item
-            
+
             if not closest_obs:
                 return None
-            
+
             # Parse the closest observation
             details = closest_obs.get('data', {}).get('instant', {}).get('details', {})
-            
+
             return WeatherObservation(
                 timestamp=target_timestamp,  # Use original timestamp
                 latitude=latitude,
@@ -421,40 +421,40 @@ class ObservationWeatherEnricher(BaseProcessor):
                 dew_point=details.get('dew_point_temperature'),
                 wind_gust=details.get('wind_speed_of_gust')
             )
-            
+
         except Exception as e:
             self.logger.warning(f"Failed to parse YR.no data: {e}")
             return None
 
-    def _parse_cached_weather(self, cached_data: Dict[str, Any], latitude: float, 
+    def _parse_cached_weather(self, cached_data: Dict[str, Any], latitude: float,
                             longitude: float, target_timestamp: datetime) -> Optional[WeatherObservation]:
         """Parse cached weather data to find the closest observation."""
         try:
             import json
             timeseries = json.loads(cached_data)
-            
+
             # Find the closest timestamp in cached data
             closest_obs = None
             min_time_diff = float('inf')
-            
+
             for item in timeseries:
                 timestamp_str = item.get('time')
                 if not timestamp_str:
                     continue
-                    
+
                 obs_timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
                 time_diff = abs((obs_timestamp - target_timestamp).total_seconds())
-                
+
                 if time_diff < min_time_diff:
                     min_time_diff = time_diff
                     closest_obs = item
-            
+
             if not closest_obs:
                 return None
-            
+
             # Parse the closest observation
             details = closest_obs.get('data', {}).get('instant', {}).get('details', {})
-            
+
             return WeatherObservation(
                 timestamp=target_timestamp,
                 latitude=latitude,
@@ -471,7 +471,7 @@ class ObservationWeatherEnricher(BaseProcessor):
                 dew_point=details.get('dew_point_temperature'),
                 wind_gust=details.get('wind_speed_of_gust')
             )
-            
+
         except Exception as e:
             self.logger.warning(f"Failed to parse cached weather data: {e}")
             return None
@@ -484,30 +484,30 @@ class ObservationWeatherEnricher(BaseProcessor):
         """Get cached weather data."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 SELECT response_data FROM observation_weather_cache
                 WHERE cache_key = ? AND expires_at > ?
             """, (cache_key, datetime.now().isoformat()))
-            
+
             row = cursor.fetchone()
             if row:
                 import json
                 return json.loads(row[0])
-        
+
         return None
 
-    def _cache_weather_data(self, cache_key: str, latitude: float, longitude: float, 
+    def _cache_weather_data(self, cache_key: str, latitude: float, longitude: float,
                           date: datetime.date, data: Dict[str, Any]):
         """Cache weather data."""
         expires_at = datetime.now() + timedelta(hours=6)  # Cache for 6 hours
-        
+
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             import json
             data_json = json.dumps(data)
-            
+
             cursor.execute("""
                 INSERT OR REPLACE INTO observation_weather_cache
                 (cache_key, latitude, longitude, date, response_data, created_at, expires_at)
@@ -521,14 +521,14 @@ class ObservationWeatherEnricher(BaseProcessor):
                 datetime.now().isoformat(),
                 expires_at.isoformat()
             ))
-            
+
             conn.commit()
 
     def _store_weather_for_observation(self, observation_id: str, weather_data: WeatherObservation):
         """Store weather data for an observation."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 INSERT OR REPLACE INTO observation_weather
                 (observation_id, timestamp, latitude, longitude,
@@ -553,7 +553,7 @@ class ObservationWeatherEnricher(BaseProcessor):
                 weather_data.wind_gust,
                 datetime.now().isoformat()
             ))
-            
+
             conn.commit()
 
     def get_weather_for_observation(self, observation_id: str) -> Optional[Dict[str, Any]]:
@@ -564,18 +564,18 @@ class ObservationWeatherEnricher(BaseProcessor):
         """Get weather enrichment statistics."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             # Total weather observations
             cursor.execute("SELECT COUNT(*) FROM observation_weather")
             total_observations = cursor.fetchone()[0]
-            
+
             # Date range
             cursor.execute("""
                 SELECT MIN(timestamp) as earliest, MAX(timestamp) as latest
                 FROM observation_weather
             """)
             date_range = cursor.fetchone()
-            
+
             # Observations by camera (if available)
             cursor.execute("""
                 SELECT COUNT(*) FROM observation_weather ow
@@ -583,7 +583,7 @@ class ObservationWeatherEnricher(BaseProcessor):
                 WHERE o.camera_id IS NOT NULL
             """)
             with_camera = cursor.fetchone()[0]
-            
+
             return {
                 "total_weather_observations": total_observations,
                 "date_range": {
@@ -597,16 +597,16 @@ class ObservationWeatherEnricher(BaseProcessor):
         """Clean up expired weather cache entries."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 DELETE FROM observation_weather_cache
                 WHERE expires_at < ?
             """, (datetime.now().isoformat(),))
-            
+
             deleted_count = cursor.rowcount
             conn.commit()
-            
+
             if deleted_count > 0:
                 self.logger.info(f"Cleaned up {deleted_count} expired weather cache entries")
-            
+
             return deleted_count

@@ -1,13 +1,13 @@
 # Weather Integration Configuration for Munin
-# YR.no Weather Data Enrichment Settings
+# MET.no Weather Data Enrichment Settings
 
 weather:
   # Primary weather provider
-  provider: "yr_no"
+  provider: "met_no"
   
-  # YR.no specific settings
-  yr_no:
-    # User agent for API requests (required by YR.no)
+  # MET.no specific settings
+  met_no:
+    # User agent for API requests (required by MET.no)
     user_agent: "Wildlife-Pipeline/1.0 (contact@wildlife-pipeline.org)"
     
     # API endpoints
@@ -21,22 +21,22 @@ weather:
     retry_delay: 5  # seconds
     
     # Cache settings
-    cache_duration_hours: 6  # YR.no updates frequently
+    cache_duration_hours: 6  # MET.no updates frequently
     max_cache_entries: 1000
     
   # Database settings
   database:
     # Weather observations table
-    weather_table: "yr_weather_observations"
-    cache_table: "yr_weather_cache"
+    weather_table: "met_weather_observations"
+    cache_table: "met_weather_cache"
     
     # Indexes for performance
     indexes:
-      - "idx_yr_weather_cluster"
-      - "idx_yr_weather_timestamp"
-      - "idx_yr_weather_coords"
-      - "idx_yr_cache_key"
-      - "idx_yr_cache_expires"
+      - "idx_met_weather_cluster"
+      - "idx_met_weather_timestamp"
+      - "idx_met_weather_coords"
+      - "idx_met_cache_key"
+      - "idx_met_cache_expires"
   
   # Enrichment settings
   enrichment:

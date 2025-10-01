@@ -32,9 +32,9 @@ except ImportError as e:
     sys.exit(1)
 
 from ..common.core.base import BaseProcessor
-from ..common.exceptions import ProcessingError, ValidationError
-from ..common.utils.logging_utils import get_logger, ProcessingTimer
-from ..common.utils.file_utils import is_video_file, get_file_size
+from ..common.exceptions import ValidationError
+from ..common.utils.logging_utils import get_logger
+from ..common.utils.file_utils import is_video_file
 from .wildlife_detector import Detection
 
 
@@ -191,10 +191,10 @@ class OptimizedVideoProcessor(BaseProcessor):
 
     def process(self, input_data: Any) -> Any:
         """Process video data.
-        
+
         Args:
             input_data: Video path or configuration dictionary
-            
+
         Returns:
             Processing results
         """
@@ -210,13 +210,13 @@ class OptimizedVideoProcessor(BaseProcessor):
                 output_dir = Path(output_dir)
         else:
             raise ValidationError(f"Unsupported input data type: {type(input_data)}")
-            
+
         if not video_path.exists():
             raise ValidationError(f"Video file not found: {video_path}")
-            
+
         if not is_video_file(video_path):
             raise ValidationError(f"File is not a video: {video_path}")
-            
+
         return self.process_video_optimized(video_path, detector, output_dir)
 
     def _check_gpu_support(self) -> bool:

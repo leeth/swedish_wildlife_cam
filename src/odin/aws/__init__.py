@@ -16,7 +16,7 @@ from .batch_workflow import BatchWorkflowManager
 
 __all__ = [
     'InfrastructureManager',
-    'PipelineManager', 
+    'PipelineManager',
     'CostOptimizationManager',
     'BatchWorkflowManager'
 ]

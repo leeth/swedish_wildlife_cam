@@ -2,7 +2,7 @@
 File utility functions.
 """
 
-import os
+# Removed unused import os
 from pathlib import Path
 from typing import Union, List
 import mimetypes
@@ -10,10 +10,10 @@ import mimetypes
 
 def ensure_directory(path: Union[str, Path]) -> Path:
     """Ensure a directory exists, creating it if necessary.
-    
+
     Args:
         path: Path to the directory
-        
+
     Returns:
         Path object of the directory
     """
@@ -24,10 +24,10 @@ def ensure_directory(path: Union[str, Path]) -> Path:
 
 def get_file_extension(file_path: Union[str, Path]) -> str:
     """Get the file extension (without dot).
-    
+
     Args:
         file_path: Path to the file
-        
+
     Returns:
         File extension without dot
     """
@@ -36,10 +36,10 @@ def get_file_extension(file_path: Union[str, Path]) -> str:
 
 def is_image_file(file_path: Union[str, Path]) -> bool:
     """Check if a file is an image.
-    
+
     Args:
         file_path: Path to the file
-        
+
     Returns:
         True if the file is an image
     """
@@ -49,10 +49,10 @@ def is_image_file(file_path: Union[str, Path]) -> bool:
 
 def is_video_file(file_path: Union[str, Path]) -> bool:
     """Check if a file is a video.
-    
+
     Args:
         file_path: Path to the file
-        
+
     Returns:
         True if the file is a video
     """
@@ -62,10 +62,10 @@ def is_video_file(file_path: Union[str, Path]) -> bool:
 
 def get_file_size(file_path: Union[str, Path]) -> int:
     """Get the size of a file in bytes.
-    
+
     Args:
         file_path: Path to the file
-        
+
     Returns:
         File size in bytes
     """
@@ -74,10 +74,10 @@ def get_file_size(file_path: Union[str, Path]) -> int:
 
 def get_mime_type(file_path: Union[str, Path]) -> str:
     """Get the MIME type of a file.
-    
+
     Args:
         file_path: Path to the file
-        
+
     Returns:
         MIME type string
     """
@@ -85,16 +85,16 @@ def get_mime_type(file_path: Union[str, Path]) -> str:
     return mime_type or 'application/octet-stream'
 
 
-def find_files(directory: Union[str, Path], 
+def find_files(directory: Union[str, Path],
                pattern: str = "*",
                recursive: bool = True) -> List[Path]:
     """Find files matching a pattern in a directory.
-    
+
     Args:
         directory: Directory to search
         pattern: File pattern to match
         recursive: Whether to search recursively
-        
+
     Returns:
         List of matching file paths
     """
@@ -107,10 +107,10 @@ def find_files(directory: Union[str, Path],
 
 def safe_filename(filename: str) -> str:
     """Create a safe filename by removing/replacing invalid characters.
-    
+
     Args:
         filename: Original filename
-        
+
     Returns:
         Safe filename
     """
@@ -119,12 +119,12 @@ def safe_filename(filename: str) -> str:
     safe_name = filename
     for char in invalid_chars:
         safe_name = safe_name.replace(char, '_')
-    
+
     # Remove leading/trailing spaces and dots
     safe_name = safe_name.strip(' .')
-    
+
     # Ensure it's not empty
     if not safe_name:
         safe_name = 'unnamed'
-        
+
     return safe_name

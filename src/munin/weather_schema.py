@@ -6,12 +6,12 @@ Defines the weather data structure with nested weather_* keys for better organiz
 
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
-from datetime import datetime
+# Removed unused import datetime
 
 @dataclass
 class WeatherData:
     """Weather data structure for wildlife observations."""
-    
+
     weather_time: str
     temp_c: Optional[float] = None
     wind_ms: Optional[float] = None
@@ -21,7 +21,7 @@ class WeatherData:
     pressure_hpa: Optional[float] = None
     condition_code: Optional[str] = None
     wind_dir_card: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary with nested weather structure."""
         return {
@@ -35,7 +35,7 @@ class WeatherData:
             'weather_condition_code': self.condition_code,
             'weather_wind_dir_card': self.wind_dir_card
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'WeatherData':
         """Create WeatherData from dictionary."""
@@ -56,7 +56,7 @@ def create_weather_struct() -> Dict[str, Any]:
     return {
         'weather_time': 'string',
         'weather_temp_c': 'float64',
-        'weather_wind_ms': 'float64', 
+        'weather_wind_ms': 'float64',
         'weather_wind_dir_deg': 'float64',
         'weather_precip_mm': 'float64',
         'weather_cloud_pc': 'float64',

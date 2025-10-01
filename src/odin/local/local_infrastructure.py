@@ -23,7 +23,7 @@ class LocalInfrastructureManager:
         self.localstack_endpoint = config.get('infrastructure.localstack.endpoint', 'http://localhost:4566')
         self.minio_endpoint = config.get('infrastructure.minio.endpoint', 'http://localhost:9000')
         self.redis_url = config.get('infrastructure.redis.url', 'redis://localhost:6379')
-        self.postgres_url = config.get('infrastructure.postgres.url', 
+        self.postgres_url = config.get('infrastructure.postgres.url',
                                      os.getenv('POSTGRES_URL', 'postgresql://wildlife:wildlife123@localhost:5432/wildlife'))
 
     def setup(self) -> bool:

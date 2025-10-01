@@ -22,9 +22,8 @@ except ImportError as e:
     exit(1)
 
 from common.core.base import BaseAnalyzer
-from common.exceptions import ProcessingError, ValidationError
-from common.utils.logging_utils import get_logger, ProcessingTimer
-from common.utils.file_utils import is_image_file, get_file_size
+from common.exceptions import ValidationError
+from common.utils.logging_utils import get_logger
 from .efficient_cluster_lookup import EfficientClusterLookup
 
 
@@ -46,10 +45,10 @@ class AnalyticsEngine(BaseAnalyzer):
 
     def analyze(self, data: Any) -> Any:
         """Analyze data using the analytics engine.
-        
+
         Args:
             data: Data to analyze (DataFrame, file path, or configuration)
-            
+
         Returns:
             Analysis results
         """
@@ -64,7 +63,7 @@ class AnalyticsEngine(BaseAnalyzer):
             df = data
         else:
             raise ValidationError(f"Unsupported data type: {type(data)}")
-            
+
         return self.generate_analytics_report(df)
 
     def load_observations_from_parquet(self, parquet_path: Union[str, Path]) -> pl.DataFrame:

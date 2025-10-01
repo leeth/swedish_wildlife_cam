@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import requests
 
 from ..common.core.base import BaseDetector
+from ..common.http_client import HttpClient, create_http_client
 from .wildlife_detector import Detection
 
 if TYPE_CHECKING:

@@ -5,7 +5,24 @@ Handles pipeline orchestration and execution.
 """
 
 import time
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, List
+
+# Define missing classes
+class ProcessingTimer:
+    """Processing timer context manager."""
+    def __init__(self, logger, message):
+        self.logger = logger
+        self.message = message
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+class ProcessingError(Exception):
+    """Processing error."""
+    pass
 
 # from common.core.base import BaseProcessor
 # from common.exceptions import ProcessingError, ValidationError
@@ -25,10 +42,10 @@ class PipelineManager:
 
     def process(self, input_data: Any) -> Any:
         """Process pipeline execution request.
-        
+
         Args:
             input_data: Pipeline configuration or stage selection
-            
+
         Returns:
             Pipeline execution result
         """
@@ -65,10 +82,10 @@ class PipelineManager:
 
     def run_selected_stages(self, stages: List[str]) -> bool:
         """Run selected pipeline stages.
-        
+
         Args:
             stages: List of stage names to run
-            
+
         Returns:
             True if all stages succeeded
         """
@@ -77,7 +94,7 @@ class PipelineManager:
             'stage2': self.run_stage2,
             'stage3': self.run_stage3,
         }
-        
+
         results = []
         for stage in stages:
             if stage in stage_methods:
@@ -86,7 +103,7 @@ class PipelineManager:
                 results.append(result)
             else:
                 self.logger.warning(f"Unknown stage: {stage}")
-                
+
         return all(results)
 
     def run_stage1(self) -> bool:

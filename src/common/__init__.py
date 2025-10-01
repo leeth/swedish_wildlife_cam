@@ -26,7 +26,7 @@ from .types import (
 __all__ = [
     # Core classes
     "BaseProcessor",
-    "BaseDetector", 
+    "BaseDetector",
     "BaseAnalyzer",
     "ConfigManager",
     "PipelineConfig",

@@ -14,7 +14,7 @@ def handler(event, context):
     Simple Lambda handler for weather enrichment.
     """
     logger.info(f"Weather Enrichment handler invoked with event: {json.dumps(event)}")
-    
+
     # Simulate weather enrichment
     result = event.copy()
     result.update({
@@ -25,6 +25,6 @@ def handler(event, context):
         },
         "enriched_detections": 1
     })
-    
+
     logger.info("Weather enrichment completed")
     return result

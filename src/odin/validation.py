@@ -18,15 +18,15 @@ class ValidationError(Exception):
 
 class ValidationManager:
     """Manager for validation operations."""
-    
+
     def __init__(self):
         """Initialize validation manager."""
         pass
-    
+
     def validate_input(self, data: Any) -> bool:
         """Validate input data."""
         return True
-    
+
     def validate_config(self, config: Dict[str, Any]) -> bool:
         """Validate configuration."""
         return True

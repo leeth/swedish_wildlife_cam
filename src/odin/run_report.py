@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class RunReportGenerator:
     """
     Generate run reports with execution statistics.
-    
+
     Report includes:
     - estimated_cost_dkk
     - actual_runtime
@@ -23,12 +23,12 @@ class RunReportGenerator:
     - cache_hits
     - top3_stands
     """
-    
+
     def __init__(self, output_dir: str = "/tmp/reports"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-    
-    def generate_report(self, 
+
+    def generate_report(self,
                        run_id: str,
                        estimated_cost_dkk: float,
                        actual_runtime_seconds: float,
@@ -38,7 +38,7 @@ class RunReportGenerator:
                        additional_metrics: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Generate run report with execution statistics.
-        
+
         Args:
             run_id: Unique run identifier
             estimated_cost_dkk: Estimated cost in Danish Kroner
@@ -47,17 +47,17 @@ class RunReportGenerator:
             cache_hits: Number of cache hits
             top3_stands: Top 3 camera stands with statistics
             additional_metrics: Additional metrics to include
-        
+
         Returns:
             Report dictionary
         """
         try:
             # Calculate cost efficiency
             cost_efficiency = estimated_cost_dkk / actual_runtime_seconds if actual_runtime_seconds > 0 else 0
-            
+
             # Calculate cache hit rate
             cache_hit_rate = cache_hits / weather_calls if weather_calls > 0 else 0
-            
+
             # Generate report
             report = {
                 'run_id': run_id,
@@ -77,19 +77,19 @@ class RunReportGenerator:
                 'top3_stands': top3_stands or [],
                 'additional_metrics': additional_metrics or {}
             }
-            
+
             # Save report to file
             report_file = self.output_dir / f"report_{run_id}.json"
             with open(report_file, 'w') as f:
                 json.dump(report, f, indent=2)
-            
+
             logger.info(f"Run report generated: {report_file}")
             return report
-            
+
         except Exception as e:
             logger.error(f"Failed to generate run report: {e}")
             return {}
-    
+
     def _format_duration(self, seconds: float) -> str:
         """Format duration in human-readable format."""
         if seconds < 60:
@@ -100,7 +100,7 @@ class RunReportGenerator:
         else:
             hours = seconds / 3600
             return f"{hours:.1f}h"
-    
+
     def get_report(self, run_id: str) -> Optional[Dict[str, Any]]:
         """Get existing report by run_id."""
         try:
@@ -112,7 +112,7 @@ class RunReportGenerator:
         except Exception as e:
             logger.error(f"Failed to get report {run_id}: {e}")
             return None
-    
+
     def list_reports(self) -> List[Dict[str, Any]]:
         """List all available reports."""
         try:
@@ -128,18 +128,18 @@ class RunReportGenerator:
                     })
                 except Exception as e:
                     logger.warning(f"Failed to read report {report_file}: {e}")
-            
+
             return sorted(reports, key=lambda x: x.get('generated_at', ''), reverse=True)
         except Exception as e:
             logger.error(f"Failed to list reports: {e}")
             return []
-    
+
     def cleanup_old_reports(self, days_to_keep: int = 30):
         """Clean up reports older than specified days."""
         try:
             cutoff_date = datetime.now() - timedelta(days=days_to_keep)
             cleaned_count = 0
-            
+
             for report_file in self.output_dir.glob("report_*.json"):
                 try:
                     file_mtime = datetime.fromtimestamp(report_file.stat().st_mtime)
@@ -149,10 +149,10 @@ class RunReportGenerator:
                         logger.debug(f"Cleaned up old report: {report_file}")
                 except Exception as e:
                     logger.warning(f"Failed to clean up {report_file}: {e}")
-            
+
             logger.info(f"Cleaned up {cleaned_count} old reports")
             return cleaned_count
-            
+
         except Exception as e:
             logger.error(f"Failed to cleanup old reports: {e}")
             return 0

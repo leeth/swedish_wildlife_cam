@@ -43,7 +43,7 @@ __all__ = [
     "ensure_directory",
     "get_file_extension",
     "is_image_file",
-    "is_video_file", 
+    "is_video_file",
     "get_file_size",
     # Image utilities
     "load_image",

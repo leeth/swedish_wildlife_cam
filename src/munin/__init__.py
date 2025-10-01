@@ -20,9 +20,9 @@ from .storage_manager import WildlifeDatabase
 
 __all__ = [
     "OptimizedFileWalker",
-    "OptimizedExifExtractor", 
+    "OptimizedExifExtractor",
     "OptimizedImageProcessor",
-    "OptimizedVideoProcessor", 
+    "OptimizedVideoProcessor",
     "YOLODetector",
     "SwedishWildlifeDetector",
     "YOLOClassifier",

@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Validate input schema for wildlife pipeline using JSON Schema.
-    
+
     Expected input:
     {
         "run_id": "string",
@@ -33,18 +33,18 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         schema_path = Path(__file__).parent.parent.parent / "conf" / "input.schema.json"
         with open(schema_path, 'r') as f:
             schema = json.load(f)
-        
+
         # Validate against JSON Schema
         jsonschema.validate(instance=event, schema=schema)
-        
+
         # Additional business logic validation
         if "images" in event:
             images = event["images"]
             if images["count"] > images["max_images"]:
                 raise ValueError(f"Image count ({images['count']}) exceeds max_images ({images['max_images']})")
-        
+
         logger.info(f"Input validation successful for run_id: {event['run_id']}")
-        
+
         # Return validated input with additional metadata
         return {
             "run_id": event["run_id"],
@@ -59,7 +59,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             "validated_at": context.aws_request_id,
             "status": "validated"
         }
-        
+
     except jsonschema.ValidationError as e:
         logger.error(f"JSON Schema validation failed: {e.message}")
         raise Exception("InvalidInput") from e

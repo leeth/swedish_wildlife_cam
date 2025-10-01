@@ -25,7 +25,7 @@ __all__ = [
     "RunReportGenerator",
     "Stage3OutputDownloader",
     "InfrastructureManager",
-    "PipelineManager", 
+    "PipelineManager",
     "CostOptimizationManager",
     "BatchWorkflowManager",
     "LocalInfrastructureManager",

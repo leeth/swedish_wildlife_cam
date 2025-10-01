@@ -4,18 +4,18 @@ Database adapter for wildlife detection results.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 import sqlite3
 
 
 class DatabaseAdapter(ABC):
     """Abstract database adapter interface."""
-    
+
     @abstractmethod
     def insert_detection(self, detection_data: Dict[str, Any]) -> int:
         """Insert a detection record and return the detection ID."""
         pass
-    
+
     @abstractmethod
     def get_summary_stats(self) -> Dict[str, Any]:
         """Get summary statistics from the database."""
@@ -24,11 +24,11 @@ class DatabaseAdapter(ABC):
 
 class SQLiteAdapter(DatabaseAdapter):
     """SQLite database adapter implementation."""
-    
+
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self._init_database()
-    
+
     def _init_database(self):
         """Initialize the database with required tables."""
         with sqlite3.connect(self.db_path) as conn:
@@ -80,12 +80,12 @@ class SQLiteAdapter(DatabaseAdapter):
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_label ON detection_results(label)")
 
             conn.commit()
-    
+
     def insert_detection(self, detection_data: Dict[str, Any]) -> int:
         """Insert a detection record and return the detection ID."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 INSERT INTO detections
                 (file_path, file_type, camera_id, timestamp, latitude, longitude,
@@ -108,20 +108,20 @@ class SQLiteAdapter(DatabaseAdapter):
                 detection_data.get('frame_number'),
                 detection_data.get('frame_timestamp')
             ))
-            
+
             detection_id = cursor.lastrowid
             conn.commit()
             return detection_id
-    
+
     def get_summary_stats(self) -> Dict[str, Any]:
         """Get summary statistics from the database."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            
+
             # Total detections
             cursor.execute("SELECT COUNT(*) FROM detections")
             total_detections = cursor.fetchone()[0]
-            
+
             # Detections by camera
             cursor.execute("""
                 SELECT camera_id, COUNT(*) as count
@@ -129,14 +129,14 @@ class SQLiteAdapter(DatabaseAdapter):
                 GROUP BY camera_id
             """)
             camera_stats = dict(cursor.fetchall())
-            
+
             # Date range
             cursor.execute("""
                 SELECT MIN(timestamp) as earliest, MAX(timestamp) as latest
                 FROM detections
             """)
             date_range = cursor.fetchone()
-            
+
             return {
                 "total_detections": total_detections,
                 "camera_stats": camera_stats,

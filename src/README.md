@@ -217,8 +217,7 @@ python -m src.hugin.cli cluster process observations.json
 - **Infrastructure as Code**: CloudFormation templates
 
 ### Weather Integration
-- **MET.no API**: Norwegian weather data
-- **YR.no API**: Swedish weather data
+- **MET.no API**: Nordic weather data (Norway, Sweden, Denmark, Finland)
 - **Weather enrichment**: Automatic weather data for observations
 - **GPS clustering**: Location-based weather matching
 
@@ -231,7 +230,7 @@ python -m src.hugin.cli cluster process observations.json
 - Multiple wildlife detector models
 - Cloud-optional architecture
 - AWS infrastructure setup (CloudFormation)
-- Weather integration (MET & YR APIs)
+- Weather integration (MET.no API for Nordic countries)
 - Docker cattle principle (stateless containers)
 - AWS cleanup and production readiness
 - Security implementation
@@ -271,7 +270,7 @@ python scripts/upload_test_data_aws.py --bucket wildlife-pipeline-test
 - **Lambda Functions**: Serverless processing
 - **AWS Batch**: Scalable compute
 - **S3**: Data storage and retrieval
-- **Weather APIs**: MET.no and YR.no integration
+- **Weather APIs**: MET.no integration for Nordic countries
 
 ## 🤝 Contributing
 

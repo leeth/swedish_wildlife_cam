@@ -7,7 +7,7 @@ from .enums import ProcessingStatus, PipelineStage
 
 __all__ = [
     "DetectionResult",
-    "ClassificationResult", 
+    "ClassificationResult",
     "ProcessingStatus",
     "PipelineStage",
 ]

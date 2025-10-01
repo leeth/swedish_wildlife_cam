@@ -17,13 +17,13 @@ from ..config import OdinConfig
 class InfrastructureManager:
     """
     Manages AWS infrastructure for Odin.
-    
+
     This class handles the complete lifecycle of AWS infrastructure including:
     - CloudFormation stack management
     - AWS Batch resource setup
     - S3 bucket creation and configuration
     - IAM role and policy management
-    
+
     Attributes:
         config: Odin configuration object
         region: AWS region for deployment
@@ -37,7 +37,7 @@ class InfrastructureManager:
     def __init__(self, config: OdinConfig):
         """
         Initialize infrastructure manager.
-        
+
         Args:
             config: Odin configuration object containing deployment settings
         """
@@ -74,7 +74,7 @@ class InfrastructureManager:
 
             print("✅ Infrastructure setup complete!")
             return True
-            
+
         except Exception as e:
             print(f"❌ Infrastructure setup failed: {e}")
             print("🧹 Attempting rollback...")

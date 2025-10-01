@@ -93,7 +93,7 @@ def ingest(input_path: str, output_path: str, extensions: str,
 @click.option('--save-crops', is_flag=True, help='Save cropped images')
 @click.option('--workers', type=int, help='Number of parallel workers')
 def detect(input_path: str, output_path: str, labels: Optional[str], time_fix: Optional[str],
-           model: str, confidence: float, min_area: float, max_area: float, 
+           model: str, confidence: float, min_area: float, max_area: float,
            edge_margin: int, crop_padding: float, save_crops: bool, workers: Optional[int]):
     """Detect wildlife in images and videos with enhanced ergonomics.
 
@@ -107,7 +107,7 @@ def detect(input_path: str, output_path: str, labels: Optional[str], time_fix: O
     if labels:
         click.echo(f"📋 Loading species labels from: {labels}")
         # TODO: Load species labels configuration
-    
+
     if time_fix:
         click.echo(f"⏰ Loading time offsets from: {time_fix}")
         # TODO: Load time offset configuration

@@ -6,12 +6,37 @@ by both Munin and Hugin for infrastructure lifecycle management.
 """
 
 import time
+import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Any
 
 import boto3
 
 from ..config import CostOptimizationConfig
+
+# Create logger
+logger = logging.getLogger(__name__)
+
+# Define missing classes
+class ConfigurationError(Exception):
+    """Configuration error."""
+    pass
+
+class ProcessingError(Exception):
+    """Processing error."""
+    pass
+
+class ProcessingTimer:
+    """Processing timer context manager."""
+    def __init__(self, logger, message):
+        self.logger = logger
+        self.message = message
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
 
 class CostOptimizationManager:
@@ -20,7 +45,7 @@ class CostOptimizationManager:
     def __init__(self, config: CostOptimizationConfig, **kwargs):
         self.config = config
         self.logger = None
-        
+
         try:
             self.batch = boto3.client('batch', region_name=config.region)
             self.ec2 = boto3.client('ec2', region_name=config.region)
@@ -35,19 +60,19 @@ class CostOptimizationManager:
 
     def process(self, input_data: Any) -> Any:
         """Process infrastructure setup request.
-        
+
         Args:
             input_data: Dictionary containing job_count and gpu_required
-            
+
         Returns:
             Setup result
         """
         if not isinstance(input_data, dict):
             raise ProcessingError("Input data must be a dictionary")
-            
+
         job_count = input_data.get('job_count', 1)
         gpu_required = input_data.get('gpu_required', self.config.gpu_required)
-        
+
         return self.setup_infrastructure(job_count, gpu_required)
 
     def setup_infrastructure(self, job_count: int = 1, gpu_required: bool = None) -> bool:

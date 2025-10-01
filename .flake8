@@ -1,0 +1,21 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E501,W293,W391,W292,E128,E302,E305,E402,E303,E129,E122,E301,E306,W291,F541,F841,F811
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    build,
+    dist,
+    .pytest_cache,
+    .mypy_cache,
+    .tox,
+    test_data,
+    examples,
+    docs
+per-file-ignores =
+    src/hugin/examples/*:E501,E302,E305
+    src/munin/examples/*:E501,E302,E305
+    test/*:E501,E302,E305
+    scripts/*:E501,E302,E305

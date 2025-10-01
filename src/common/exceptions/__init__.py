@@ -6,7 +6,7 @@ from .base import WildlifePipelineError, ConfigurationError, ProcessingError, Va
 
 __all__ = [
     "WildlifePipelineError",
-    "ConfigurationError", 
+    "ConfigurationError",
     "ProcessingError",
     "ValidationError",
 ]

@@ -20,7 +20,7 @@ from .post_s2_workflow import PostS2Workflow
 __all__ = [
     "AnalyticsEngine",
     "GPSClustering",
-    "ClusterService", 
+    "ClusterService",
     "Stage3Reporter",
     "DataConverter",
     "ObservationCompressor",
