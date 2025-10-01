@@ -23,6 +23,10 @@ Odins Ravne er et omfattende system til svensk vildtmonitorering der kombinerer:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+
+# AWS CLI (for production)
+pip install awscli
+aws configure
 ```
 
 ### Local Development
@@ -39,11 +43,26 @@ make run-local
 
 ### Production (AWS)
 ```bash
-# Deploy to AWS
+# Deploy to AWS (EU-NORTH-1)
 make deploy-aws
+
+# Upload test data
+python scripts/upload_test_data_aws.py --bucket wildlife-pipeline-test
 
 # Run pipeline in AWS
 make run-aws
+```
+
+### Weather Integration
+```bash
+# Test weather enrichment
+python -m src.munin.cli weather --input /path/to/data --output /path/to/output
+
+# Test MET weather API
+python -m src.munin.cli weather --provider met --location "Stockholm"
+
+# Test YR weather API  
+python -m src.munin.cli weather --provider yr --location "Stockholm"
 ```
 
 ## 🏗️ Architecture
@@ -78,26 +97,38 @@ graph TD
 ├── src/                     # Source code
 │   ├── common/             # Shared functionality
 │   ├── odin/               # All-Father (Infrastructure)
+│   │   ├── aws/            # AWS infrastructure
+│   │   │   ├── infrastructure/ # CloudFormation templates
+│   │   │   ├── lambdas/     # Lambda functions
+│   │   │   └── batch/       # Batch job definitions
+│   │   └── local/          # Local development
 │   ├── munin/              # Memory Keeper (Data Processing)
+│   │   ├── weather/        # Weather enrichment
+│   │   ├── detection/      # Object detection
+│   │   └── processing/     # Data processing
 │   └── hugin/              # Thought Bringer (Analytics)
 ├── conf/                   # Configuration
 │   ├── profiles/           # Environment profiles
 │   ├── docker/             # Docker configurations
 │   └── infrastructure/     # Infrastructure configs
-├── src/odin/infrastructure/ # Infrastructure as Code
-│   ├── stepfn/             # Step Functions definitions
+├── src/odin/aws/infrastructure/ # AWS Infrastructure as Code
+│   ├── cloudformation/     # CloudFormation templates
 │   ├── batch/              # AWS Batch configurations
-│   └── cloudformation/     # CloudFormation templates
-├── src/odin/lambdas/       # Lambda functions
+│   └── stepfn/             # Step Functions definitions
+├── src/odin/aws/lambdas/   # Lambda functions
 │   ├── guard_budget/       # Budget validation
 │   ├── stage0_exif/        # EXIF processing
 │   ├── stage2_post/        # Post-processing
-│   └── weather_enrichment/ # Weather data
+│   ├── weather_enrichment/ # Weather data
+│   └── write_parquet/      # Output formatting
 ├── docker/                 # Docker configurations
 ├── scripts/                # Utility scripts
+│   ├── infrastructure/     # AWS deployment scripts
+│   └── quality/            # Code quality tools
 ├── test/                   # Test files
+├── test_data/              # Test data and samples
 ├── docs/                   # Documentation
-└── logs/                   # Log files
+└── dist/                   # Lambda deployment packages
 ```
 
 ## 🐦‍⬛ Components
@@ -129,6 +160,7 @@ python -m src.odin.cli pipeline stage1
 - Stage 1: Object detection (positive observations)
 - EXIF metadata processing
 - GPS location classification
+- Weather enrichment (MET & YR APIs)
 - Cloud-optional architecture
 
 **CLI Commands:**
@@ -136,6 +168,11 @@ python -m src.odin.cli pipeline stage1
 # Data Processing
 python -m src.munin.cli ingest /path/to/images /path/to/output
 python -m src.munin.cli detect --input /path/to/images --output /path/to/output
+
+# Weather Enrichment
+python -m src.munin.cli weather --input /path/to/data --output /path/to/output
+python -m src.munin.cli weather --provider met --location "Stockholm"
+python -m src.munin.cli weather --provider yr --location "Stockholm"
 ```
 
 ### 🧠 Hugin (Thought Bringer)
@@ -161,15 +198,21 @@ python -m src.hugin.cli cluster process observations.json
 - **PyTorch**: Machine learning framework
 - **YOLOv8**: Object detection models
 - **OpenCV**: Image/video processing
-- **AWS**: S3, Batch, Lambda, Step Functions
+- **AWS**: S3, Batch, Lambda, Step Functions, CloudFormation
 
 ### Cloud Technologies
-- **AWS**: S3, Batch, ECR, CloudFormation, Step Functions
-- **Docker**: Containerization
+- **AWS**: S3, Batch, ECR, CloudFormation, Step Functions, Lambda
+- **Docker**: Containerization (cattle principle - stateless)
 - **LocalStack**: AWS API emulator
 - **MinIO**: S3-compatible storage
 - **Redis**: Caching and job queues
 - **PostgreSQL**: Metadata storage
+
+### Weather Integration
+- **MET.no API**: Norwegian weather data
+- **YR.no API**: Swedish weather data
+- **Weather enrichment**: Automatic weather data for observations
+- **GPS clustering**: Location-based weather matching
 
 ## 📊 Current Status
 
@@ -179,9 +222,14 @@ python -m src.hugin.cli cluster process observations.json
 - Video processing with frame extraction
 - Multiple wildlife detector models
 - Cloud-optional architecture
-- AWS infrastructure setup
+- AWS infrastructure setup (CloudFormation)
+- Weather integration (MET & YR APIs)
+- Docker cattle principle (stateless containers)
+- AWS cleanup and production readiness
 - Security implementation
 - Comprehensive testing
+- Lambda functions for AWS deployment
+- Step Functions orchestration
 
 ### 📋 Roadmap
 See [ROADMAP.md](docs/ROADMAP.md) for detailed development plan.
@@ -189,9 +237,33 @@ See [ROADMAP.md](docs/ROADMAP.md) for detailed development plan.
 ## 🔧 Setup & Deployment
 
 - **Local Setup**: [LOCAL_SETUP.md](docs/LOCAL_SETUP.md)
-- **Infrastructure**: [INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md)
+- **AWS Infrastructure**: [src/odin/aws/infrastructure/README.md](src/odin/aws/infrastructure/README.md)
+- **Lambda Functions**: [src/odin/aws/lambdas/README.md](src/odin/aws/lambdas/README.md)
+- **Step Functions**: [docs/STEP_FUNCTIONS_ARCHITECTURE.md](docs/STEP_FUNCTIONS_ARCHITECTURE.md)
 - **Cost Optimization**: [COST_OPTIMIZATION.md](docs/COST_OPTIMIZATION.md)
 - **Utilities & Tools**: [UTILITIES.md](docs/UTILITIES.md)
+
+## 🚀 AWS Deployment
+
+### Prerequisites
+```bash
+# AWS CLI configured
+aws configure
+
+# Deploy infrastructure
+make deploy-aws
+
+# Upload test data
+python scripts/upload_test_data_aws.py --bucket wildlife-pipeline-test
+```
+
+### Production Features
+- **CloudFormation**: Infrastructure as Code
+- **Step Functions**: Pipeline orchestration
+- **Lambda Functions**: Serverless processing
+- **AWS Batch**: Scalable compute
+- **S3**: Data storage and retrieval
+- **Weather APIs**: MET.no and YR.no integration
 
 ## 🤝 Contributing
 
