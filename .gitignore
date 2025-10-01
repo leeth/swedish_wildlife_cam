@@ -41,3 +41,10 @@ logs/
 *.log
 *.pid
 *.tmp
+
+# Build artifacts (cattle principle - auto-generated)
+build/
+dist/
+*.zip
+*.tar.gz
+*.whl
