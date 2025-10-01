@@ -70,7 +70,7 @@ dev = [
 gpu = [
     "torch==2.1.0+cu118",
     "torchvision==0.16.0+cu118", 
-    "tensorrt==8.6.1",
+    "tensorrt==10.13.3.9",
     "onnx==1.15.0",
     "onnxruntime-gpu==1.16.3",
     "triton==2.1.0",
