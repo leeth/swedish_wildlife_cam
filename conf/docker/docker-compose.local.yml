@@ -1,7 +1,7 @@
 # version: '3.8'  # Obsolete attribute removed
 
 services:
-  # LocalStack - AWS API Emulator
+  # LocalStack - AWS API Emulator (stateless)
   localstack:
     image: localstack/localstack:latest
     container_name: wildlife-localstack
@@ -11,17 +11,11 @@ services:
     environment:
       - SERVICES=s3,batch,iam,cloudformation,ec2,logs
       - DEBUG=1
-      - DATA_DIR=/tmp/localstack/data
-      - PERSISTENCE=1
-      - LAMBDA_EXECUTOR=docker
-      - DOCKER_HOST=unix:///var/run/docker.sock
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
-      - "./localstack-data:/tmp/localstack"
+      - PERSISTENCE=0  # No persistence - cattle principle
     networks:
       - wildlife-network
 
-  # MinIO - S3-compatible storage
+  # MinIO - S3-compatible storage (stateless)
   minio:
     image: minio/minio:latest
     container_name: wildlife-minio
@@ -32,23 +26,19 @@ services:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin123
     command: server /data --console-address ":9001"
-    volumes:
-      - "./minio-data:/data"
     networks:
       - wildlife-network
 
-  # Redis - For caching and job queues
+  # Redis - For caching (stateless)
   redis:
     image: redis:7-alpine
     container_name: wildlife-redis
     ports:
       - "6379:6379"
-    volumes:
-      - "./redis-data:/data"
     networks:
       - wildlife-network
 
-  # PostgreSQL - For metadata storage
+  # PostgreSQL - For metadata (stateless)
   postgres:
     image: postgres:15-alpine
     container_name: wildlife-postgres
@@ -58,12 +48,10 @@ services:
       - POSTGRES_DB=wildlife
       - POSTGRES_USER=wildlife
       - POSTGRES_PASSWORD=wildlife123
-    volumes:
-      - "./postgres-data:/var/lib/postgresql/data"
     networks:
       - wildlife-network
 
-  # Wildlife Processing Worker
+  # Wildlife Processing Worker (stateless)
   wildlife-worker:
     build:
       context: .
@@ -92,13 +80,6 @@ services:
     profiles:
       - worker
 
-
 networks:
   wildlife-network:
     driver: bridge
-
-volumes:
-  localstack-data:
-  minio-data:
-  redis-data:
-  postgres-data:
