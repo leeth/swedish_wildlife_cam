@@ -1,5 +1,8 @@
 # 🐦‍⬛ Odins Ravne – Vildtovervågning med Munin & Hugin
 
+[![Build Status](https://github.com/leeth/swedish_wildlife_cam/workflows/PR%20Baseline/badge.svg)](https://github.com/leeth/swedish_wildlife_cam/actions)
+[![Coverage](https://codecov.io/gh/leeth/swedish_wildlife_cam/branch/main/graph/badge.svg)](https://codecov.io/gh/leeth/swedish_wildlife_cam)
+
 ## 🔍 Hvad er det?
 
 Forestil dig, at dine vildtkameraer selv kunne fortælle dig:

@@ -1,0 +1,74 @@
+# Release workflow (Niveau 4 - Currently disabled)
+# Uncomment the 'on:' section below to activate this workflow
+
+# on:
+#   push:
+#     tags:
+#       - 'v*'
+
+name: Release
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Generate schemas
+        run: make schema
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ github.repository }}:latest
+          format: spdx-json
+          output-file: sbom.spdx.json
+      
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom-release
+          path: sbom.spdx.json
+      
+      - name: Upload schemas
+        uses: actions/upload-artifact@v3
+        with:
+          name: schemas-release
+          path: schemas/
+      
+      - name: Run Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image: ghcr.io/${{ github.repository }}:latest
+          format: sarif
+          output: trivy-release-results.sarif
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: trivy-release-results.sarif
