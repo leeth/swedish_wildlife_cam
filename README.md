@@ -11,9 +11,9 @@ Forestil dig, at dine vildtkameraer selv kunne fortælle dig:
 
 Systemet består af tre dele, opkaldt efter nordisk mytologi:
 
-- 🐦 **Munin** – hukommelsen: han samler billederne og finder de interessante
-- 🐦 **Hugin** – tanken: han analyserer, hvad der ses, og hvilke dyr der er på billederne
-- 🧙 **Odin** – herskeren: han styrer hele processen og gemmer resultaterne til dig
+- 🐦‍⬛ **Munin** – hukommelsen: han samler billederne og finder de interessante
+- 🐦‍⬛ **Hugin** – tanken: han analyserer, hvad der ses, og hvilke dyr der er på billederne
+- ⚡ **Odin** – herskeren: han styrer hele processen og gemmer resultaterne til dig
 
 ---
 
@@ -68,8 +68,8 @@ graph TB
     end
     
     subgraph "Odins Ravne System"
-        D[🐦 Munin<br/>Hukommelsen] --> E[🐦 Hugin<br/>Tanken]
-        E --> F[🧙 Odin<br/>Herskeren]
+        D[🐦‍⬛ Munin<br/>Hukommelsen] --> E[🐦‍⬛ Hugin<br/>Tanken]
+        E --> F[⚡ Odin<br/>Herskeren]
     end
     
     subgraph "Resultater"
@@ -94,19 +94,19 @@ graph TB
 
 ## 🎯 Hvad kan systemet?
 
-### 🐦 Munin (Hukommelsen)
+### 🐦‍⬛ Munin (Hukommelsen)
 - **Finder interessante billeder**: Automatisk detektering af dyr på billeder
 - **Læser metadata**: GPS-koordinater, tidspunkt, kamera-indstillinger
 - **Filtrerer støj**: Ignorerer tomme billeder og falske alarmer
 - **Organiserer data**: Strukturerer billeder efter tid og sted
 
-### 🐦 Hugin (Tanken)
+### 🐦‍⬛ Hugin (Tanken)
 - **Genkender arter**: Identificerer hvilke dyr der er på billederne
 - **Analyserer adfærd**: Spor, aktivitetsmønstre og tidsintervaller
 - **Grupperer observationer**: Finder sammenhænge mellem forskellige billeder
 - **Vurderer kvalitet**: Bedømmer hvor pålidelig hver observation er
 
-### 🧙 Odin (Herskeren)
+### ⚡ Odin (Herskeren)
 - **Styrer processen**: Koordinerer Munin og Hugin
 - **Samler resultater**: Laver overblik over alle observationer
 - **Eksporterer data**: Skaber Excel/CSV filer til videre analyse
