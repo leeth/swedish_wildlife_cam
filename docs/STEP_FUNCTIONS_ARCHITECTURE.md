@@ -36,16 +36,158 @@ GuardBudget → Stage-0 (EXIF/time-fix) → Stage-1 (detection via AWS Batch) �
 
 ## Step Functions Workflow
 
+### Mermaid Architecture Diagram
+
+```mermaid
+graph TD
+    A["Manual Start"] --> B["GuardBudget: Cost Validation"]
+    B --> C["Stage-0: EXIF Processing"]
+    C --> D["CostEstimation: Per-job Cost"]
+    D --> E["Stage-1: AWS Batch Detection"]
+    E --> F["Stage-2: Post-processing & Clustering"]
+    F --> G["WeatherEnrichment: YR.no API"]
+    G --> H["WriteParquet: Final Output"]
+    H --> I["Success: Complete Pipeline"]
+    
+    B -->|"Budget Exceeded"| J["Fail: Budget Error"]
+    
+    style A fill:#e1f5fe
+    style B fill:#ffebee
+    style C fill:#f3e5f5
+    style D fill:#fff3e0
+    style E fill:#f3e5f5
+    style F fill:#e8f5e8
+    style G fill:#e8f5e8
+    style H fill:#e8f5e8
+    style I fill:#fff3e0
+    style J fill:#ffcdd2
+```
+
 ### State Machine Definition
 
-The workflow is defined in `infra/stepfn/state_machine.asl.json`:
+The workflow is defined in CloudFormation template with the following states:
 
 1. **GuardBudget** - Validates budget constraints
 2. **Stage0Exif** - EXIF data extraction and time correction
-3. **SubmitBatchStage1** - Wildlife detection via AWS Batch
-4. **Stage2Post** - Post-processing and clustering
-5. **WeatherEnrichment** - Weather data enrichment
-6. **WriteParquet** - Final output generation
+3. **CostEstimation** - Per-job cost calculation
+4. **SubmitBatchStage1** - Wildlife detection via AWS Batch
+5. **Stage2Post** - Post-processing and clustering
+6. **WeatherEnrichment** - Weather data enrichment
+7. **WriteParquet** - Final output generation
+
+### State Definition Extract
+
+```json
+{
+  "Comment": "Wildlife pipeline: budget-guarded manual workflow with weather enrichment",
+  "StartAt": "GuardBudget",
+  "States": {
+    "GuardBudget": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "${GuardBudgetLambda}",
+        "Payload.$": "$"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": ["BudgetExceeded"],
+          "ResultPath": "$.error",
+          "Next": "FailBudget"
+        }
+      ],
+      "Next": "Stage0Exif"
+    },
+    "Stage0Exif": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "${Stage0ExifLambda}",
+        "Payload.$": "$"
+      },
+      "Next": "CostEstimation"
+    },
+    "CostEstimation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "${CostEstimationLambda}",
+        "Payload.$": "$"
+      },
+      "Next": "SubmitBatchStage1"
+    },
+    "SubmitBatchStage1": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::batch:submitJob.sync",
+      "Parameters": {
+        "JobName.$": "States.Format('munin-detector-{}', $.session_id)",
+        "JobQueue": "${BatchJobQueue}",
+        "JobDefinition": "${BatchJobDefinition}",
+        "ContainerOverrides": {
+          "Environment": [
+            {
+              "Name": "INPUT_URI",
+              "Value.$": "$.stage0_output_uri"
+            },
+            {
+              "Name": "OUTPUT_URI",
+              "Value.$": "$.intermediate_uri"
+            }
+          ]
+        },
+        "RetryStrategy": {
+          "Attempts": 1
+        },
+        "Timeout": {
+          "AttemptDurationSeconds.$": "$.max_job_duration"
+        }
+      },
+      "Next": "Stage2Post"
+    },
+    "Stage2Post": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "${Stage2PostLambda}",
+        "Payload.$": "$"
+      },
+      "Next": "WeatherEnrichment"
+    },
+    "WeatherEnrichment": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "${WeatherEnrichmentLambda}",
+        "Payload.$": "$"
+      },
+      "Next": "WriteParquet"
+    },
+    "WriteParquet": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "FunctionName": "${WriteParquetLambda}",
+        "Payload.$": "$"
+      },
+      "Next": "Success"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "FailBudget": {
+      "Type": "Fail",
+      "Error": "BudgetExceeded",
+      "Cause": "Estimated cost exceeds budget"
+    }
+  }
+}
+```
 
 ### Error Handling
 
@@ -106,14 +248,53 @@ make run-aws
 }
 ```
 
-## Cost Estimation
+## Cost Estimation & Optimization
+
+### Cost Calculation Formula
 
 The budget guard system estimates costs based on:
 
 - **Compute**: vCPU hours × pricing (spot vs on-demand)
-- **Storage**: S3 storage costs
+- **Storage**: S3 storage costs with Intelligent-Tiering
 - **Lambda**: Execution time and memory
 - **Step Functions**: State transitions
+
+### Per-Job Cost Estimation
+
+```python
+def calculate_job_cost(file_count: int, ms_per_frame: int, price_per_hour: float) -> dict:
+    """Calculate cost estimate: filecount × ms/frame × price"""
+    estimated_hours = (file_count * ms_per_frame) / (1000 * 60 * 60)
+    estimated_cost = estimated_hours * price_per_hour
+    
+    return {
+        'file_count': file_count,
+        'estimated_hours': estimated_hours,
+        'estimated_cost': estimated_cost,
+        'cost_per_file': estimated_cost / file_count if file_count > 0 else 0
+    }
+```
+
+### AWS Cost Optimization Features
+
+#### Batch Compute Environment
+- **Spot Instances**: 50% bid for cost savings
+- **Limited Instance Families**: c5, m5 for predictable costs
+- **Allocation Strategy**: SPOT_CAPACITY_OPTIMIZED
+- **Max vCPUs**: 100 (configurable)
+
+#### S3 Storage Optimization
+- **Intelligent-Tiering**: Automatic cost optimization
+- **Lifecycle Policies**: 
+  - Standard → Standard-IA (30 days)
+  - Standard-IA → Glacier (90 days)
+  - Glacier → Deep Archive (365 days)
+- **Automatic Cleanup**: Old frames (3 years), crops (2 years)
+
+#### Budget Monitoring
+- **CloudWatch Alarms**: $100 budget threshold
+- **SNS Notifications**: Budget exceeded alerts
+- **Cost Tracking**: Per-job cost estimates in logs
 
 ### Budget Configuration
 
