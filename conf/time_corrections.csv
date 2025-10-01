@@ -1,0 +1,6 @@
+camera_id,location,timezone,offset_seconds,clock_drift_ppm,notes
+cam01,Stockholm,Europe/Stockholm,0,0,Reference camera - no correction needed
+cam02,Gothenburg,Europe/Stockholm,120,5,2 minutes fast, 5ppm drift
+cam03,Malmö,Europe/Stockholm,-180,3,3 minutes slow, 3ppm drift
+cam04,Umeå,Europe/Stockholm,300,2,5 minutes fast, 2ppm drift
+cam05,Kiruna,Europe/Stockholm,0,1,No offset, 1ppm drift

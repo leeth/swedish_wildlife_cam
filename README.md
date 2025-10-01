@@ -29,6 +29,28 @@ Vildtkameraer giver masser af billeder — men også masser af arbejde.
 
 ---
 
+## ⚡ Prøv dette på 10 minutter
+
+```bash
+# 1. Setup miljø
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Start lokale services
+make up-localstack
+
+# 3. Deploy infrastruktur
+make deploy-local
+
+# 4. Kør test batch
+make run-local
+
+# 5. Tjek resultater
+ls -la output/
+```
+
+**Forventet output:** Parquet filer med vildt detektioner, vejrdata og GPS clustering.
+
 ## 🧠 Hvordan virker det?
 
 Når du kommer hjem fra jagten med et SD-kort fra dit kamera, gør du følgende:

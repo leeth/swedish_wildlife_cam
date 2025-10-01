@@ -13,6 +13,33 @@ Parameters:
 
 Resources:
   # S3 Bucket reference (existing bucket)
+  
+  # S3 Lifecycle Configuration for cost optimization
+  S3LifecycleConfiguration:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      LifecycleConfiguration:
+        Rules:
+          - Id: IntelligentTiering
+            Status: Enabled
+            Transitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 30
+              - StorageClass: GLACIER
+                TransitionInDays: 90
+              - StorageClass: DEEP_ARCHIVE
+                TransitionInDays: 365
+          - Id: DeleteOldFrames
+            Status: Enabled
+            ExpirationInDays: 1095  # 3 years
+            Filter:
+              Prefix: "frames/"
+          - Id: DeleteOldCrops
+            Status: Enabled
+            ExpirationInDays: 730   # 2 years
+            Filter:
+              Prefix: "crops/"
 
   # IAM Roles
   StepFunctionsExecutionRole:
@@ -145,7 +172,7 @@ Resources:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
 
-  # Batch Compute Environment
+  # Batch Compute Environment - Cost Optimized
   BatchComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
@@ -158,18 +185,25 @@ Resources:
         MinvCpus: 0
         MaxvCpus: 100
         DesiredvCpus: 0
+        # Cost optimization: Limited instance families for spot capacity
         InstanceTypes:
           - c5.large
           - c5.xlarge
           - c5.2xlarge
+          - m5.large
+          - m5.xlarge
         Subnets:
           - !Ref Subnet
         SecurityGroupIds:
           - !Ref SecurityGroup
         InstanceRole: !GetAtt BatchInstanceProfile.Arn
+        # Spot instances for cost optimization (50% bid)
+        BidPercentage: 50
+        AllocationStrategy: SPOT_CAPACITY_OPTIMIZED
         Tags:
           Project: WildlifePipeline
           Environment: !Ref Environment
+          CostOptimization: "spot-instances"
 
   # Batch Job Queue
   BatchJobQueue:
@@ -209,6 +243,61 @@ Resources:
         AttemptDurationSeconds: 3600
       PlatformCapabilities:
         - EC2
+
+  # Budget and Cost Monitoring
+  BudgetAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-wildlife-budget-alarm'
+      AlarmDescription: 'Wildlife pipeline budget exceeded'
+      MetricName: EstimatedCharges
+      Namespace: AWS/Billing
+      Statistic: Maximum
+      Period: 86400  # 24 hours
+      EvaluationPeriods: 1
+      Threshold: 100  # $100 budget
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Currency
+          Value: USD
+      AlarmActions:
+        - !Ref BudgetSNSTopic
+
+  BudgetSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${Environment}-wildlife-budget-alerts'
+      DisplayName: 'Wildlife Pipeline Budget Alerts'
+
+  # Cost estimation Lambda
+  CostEstimationLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-cost-estimation'
+      Runtime: python3.11
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          
+          def handler(event, context):
+              # Calculate cost estimate: filecount × ms/frame × price
+              file_count = event.get('file_count', 0)
+              ms_per_frame = event.get('ms_per_frame', 100)  # Default 100ms
+              price_per_hour = 0.10  # $0.10/hour for c5.large
+              
+              estimated_hours = (file_count * ms_per_frame) / (1000 * 60 * 60)
+              estimated_cost = estimated_hours * price_per_hour
+              
+              return {
+                  'file_count': file_count,
+                  'estimated_hours': estimated_hours,
+                  'estimated_cost': estimated_cost,
+                  'cost_per_file': estimated_cost / file_count if file_count > 0 else 0
+              }
+      Timeout: 60
 
   # Lambda Functions
   GuardBudgetLambda:
@@ -317,6 +406,16 @@ Resources:
                 "FunctionName": "${Stage0ExifLambda}",
                 "Payload.$": "$"
               },
+              "Next": "CostEstimation"
+            },
+            "CostEstimation": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "FunctionName": "${CostEstimationLambda}",
+                "Payload.$": "$"
+              },
               "Next": "SubmitBatchStage1"
             },
             "SubmitBatchStage1": {
@@ -388,6 +487,7 @@ Resources:
         Stage2PostLambda: !GetAtt Stage2PostLambda.Arn
         WeatherEnrichmentLambda: !GetAtt WeatherEnrichmentLambda.Arn
         WriteParquetLambda: !GetAtt WriteParquetLambda.Arn
+        CostEstimationLambda: !GetAtt CostEstimationLambda.Arn
         BatchJobQueue: !Ref BatchJobQueue
         BatchJobDefinition: !Ref BatchJobDefinition
 
