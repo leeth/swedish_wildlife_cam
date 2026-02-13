@@ -78,7 +78,7 @@ gpu = [
 
 # CPU-only dependencies (for production servers without GPU)
 cpu = [
-    "torch==2.1.0+cpu",
+    "torch==2.8.0",
     "torchvision==0.16.0+cpu",
     "onnx==1.15.0", 
     "onnxruntime==1.16.3",
